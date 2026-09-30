@@ -1,0 +1,39 @@
+{
+  "query_id": "ENERGY-06",
+  "query": "湖北近五年风电利用小时数及同比增长率",
+  "timestamp": "2026-03-03T07:25:13.202765",
+  "pipeline_status": "success",
+  "strict_passed": true,
+  "fail_reason": "OK",
+  "answer": "根据数据分析结果，湖北省近五年风电利用小时数及同比增长率如下：\n\n2021年风电利用小时数为1980.0小时；2022年为2050.0小时，同比增长3.54%（增加70.0小时）；2023年为2120.0小时，同比增长3.41%（增加70.0小时）；2024年为2085.0小时，同比下降1.65%（减少35.0小时）；2025年为2150.0小时，同比增长3.12%（增加65.0小时）。\n\n数据中2021年的同比增长率和增长量因缺乏前一年数据未提供。其余年份数据完整，单位均为小时（h）和百分比（%）。",
+  "elapsed_seconds": 18.03,
+  "execution_log": [
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_1",
+      "step_type": "query"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_2",
+      "step_type": "compute"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_3",
+      "step_type": "summarize"
+    }
+  ],
+  "data_summary": {
+    "row_count": 5,
+    "columns": [
+      "year",
+      "wind_utilization_hours",
+      "yoy_growth_rate",
+      "yoy_change_amount"
+    ]
+  }
+}

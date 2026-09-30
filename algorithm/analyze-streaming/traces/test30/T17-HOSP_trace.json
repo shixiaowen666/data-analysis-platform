@@ -1,0 +1,55 @@
+{
+  "query_id": "T17-HOSP",
+  "query": "本月人力成本同比去年增加了多少？",
+  "category": "yoy_compute",
+  "description": "同比计算",
+  "timestamp": "2026-04-03T01:39:21.254901",
+  "pipeline_status": "success",
+  "validation_status": "PASS",
+  "validation_reason": "OK",
+  "new_features": {
+    "has_filter_in_decomposition": false,
+    "has_expected_table": false,
+    "compute_result_pushed": true,
+    "step_count": 3,
+    "step_types": [
+      "query",
+      "compute",
+      "summarize"
+    ]
+  },
+  "answer": "本月全院人力成本为2450.0万元，同比去年的2330.0万元增加了120.0万元，同比增长5.15%。",
+  "elapsed_seconds": 13.5,
+  "execution_log": [
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_1",
+      "step_type": "query"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_2",
+      "step_type": "compute"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_3",
+      "step_type": "summarize"
+    }
+  ],
+  "data_summary": {
+    "row_count": 0,
+    "columns": [
+      "department",
+      "current_labor_cost",
+      "previous_labor_cost",
+      "change_amount",
+      "change_rate",
+      "yoy_growth_rate",
+      "yoy_change_amount"
+    ]
+  }
+}

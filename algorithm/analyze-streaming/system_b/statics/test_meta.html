@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>元数据测试</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; color: #333; display: flex; justify-content: center; }
+.container { max-width: 1100px; width: 100%; }
+h1 { margin-bottom: 20px; font-size: 22px; }
+.card { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 16px; }
+.card h2 { font-size: 16px; margin-bottom: 12px; color: #1a1a1a; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+.form-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; align-items: flex-end; }
+.form-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 160px; }
+.form-group label { font-size: 12px; color: #666; }
+.form-group input { padding: 6px 10px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; outline: none; }
+.form-group input:focus { border-color: #1677ff; }
+.btn { padding: 7px 16px; border: none; border-radius: 4px; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+.btn-primary { background: #1677ff; color: #fff; }
+.btn-primary:hover { background: #4096ff; }
+.btn-default { background: #fff; color: #333; border: 1px solid #d9d9d9; }
+.btn-default:hover { border-color: #1677ff; color: #1677ff; }
+.result { background: #fafafa; border: 1px solid #e8e8e8; border-radius: 4px; padding: 12px; font-size: 12px; font-family: 'Consolas', 'Menlo', monospace; white-space: pre-wrap; word-break: break-all; max-height: 500px; overflow-y: auto; margin-top: 10px; }
+.status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+.st-ok { background: #f6ffed; color: #52c41a; }
+.st-fail { background: #fff2f0; color: #ff4d4f; }
+table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+table.data th, table.data td { padding: 6px 10px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+table.data th { background: #fafafa; font-weight: 500; color: #666; }
+.stat-row { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px; }
+.stat-item { flex: 1; min-width: 140px; background: #f0f5ff; border: 1px solid #d6e4ff; border-radius: 6px; padding: 12px 16px; }
+.stat-item .num { font-size: 22px; font-weight: 600; color: #1677ff; }
+.stat-item .label { font-size: 12px; color: #666; margin-top: 2px; }
+.agg-snapshot { color: #fa8c16; font-weight: 500; }
+.agg-cumulative { color: #722ed1; font-weight: 500; }
+.agg-avg { color: #13c2c2; font-weight: 500; }
+.agg-sum { color: #52c41a; }
+.nav-link { font-size: 13px; color: #1677ff; text-decoration: none; margin-bottom: 16px; display: inline-block; }
+.hidden { display: none; }
+.tabs { display: flex; gap: 0; margin-top: 10px; border-bottom: 2px solid #f0f0f0; }
+.tab { padding: 8px 18px; font-size: 13px; cursor: pointer; border: none; background: none; color: #666; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+.tab.active { color: #1677ff; border-bottom-color: #1677ff; font-weight: 500; }
+.meta-editor { width: 100%; height: 520px; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 12px; font-family: 'Consolas', 'Menlo', monospace; line-height: 1.5; outline: none; resize: vertical; box-sizing: border-box; }
+.meta-editor:focus { border-color: #1677ff; }
+.modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal-box { background: #fff; border-radius: 8px; padding: 24px 28px 20px; width: 380px; max-width: 90vw; box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+.modal-msg { font-size: 14px; color: #333; line-height: 1.6; white-space: pre-wrap; margin-bottom: 18px; word-break: break-all; }
+.modal-btns { display: flex; justify-content: flex-end; gap: 8px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>🗂 元数据测试</h1>
+<a class="nav-link" href="/test_all">← 返回测试中心</a>
+
+<!-- 服务配置 -->
+<div class="card">
+  <h2>服务配置</h2>
+  <div class="form-row">
+    <div class="form-group">
+      <label>System B 地址</label>
+      <input id="baseUrl" value="">
+    </div>
+    <div class="form-group" style="flex:0;">
+      <button class="btn btn-default" onclick="checkHealth()">健康检查</button>
+    </div>
+    <span id="healthStatus" style="align-self: center; font-size: 13px;"></span>
+  </div>
+</div>
+
+
+<!-- 加载元数据 -->
+<div class="card">
+  <h2>加载元数据（GET /api/v1/database-meta）</h2>
+  <div class="form-row">
+    <button class="btn btn-primary" id="loadBtn" onclick="loadMeta()">重新加载</button>
+    <span class="status-badge" id="loadStatus"></span>
+  </div>
+  <div id="statArea" class="stat-row hidden"></div>
+</div>
+
+<!-- 元数据浏览 -->
+<div class="card hidden" id="browseCard">
+  <h2>元数据浏览</h2>
+  <div class="tabs">
+    <button class="tab active" data-tab="metrics" onclick="switchTab(this)">指标 (<span id="tabMetricsN">0</span>)</button>
+    <button class="tab" data-tab="dims" onclick="switchTab(this)">维度 (<span id="tabDimsN">0</span>)</button>
+    <button class="tab" data-tab="tables" onclick="switchTab(this)">表 (<span id="tabTablesN">0</span>)</button>
+    <button class="tab" data-tab="raw" onclick="switchTab(this)">JSON 原始数据 (<span id="tabRawN">0</span>)</button>
+  </div>
+  <div id="tab-metrics" class="tabpane"></div>
+  <div id="tab-dims" class="tabpane hidden"></div>
+  <div id="tab-tables" class="tabpane hidden"></div>
+  <div id="tab-raw" class="tabpane hidden"></div>
+</div>
+
+</div>
+
+<div id="toast" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);padding:8px 16px;border:1px solid;border-radius:4px;font-size:13px;z-index:99;box-shadow:0 2px 8px rgba(0,0,0,0.15);"></div>
+
+<script>
+// nginx 前缀代理支持：直连 5000 时 BASE 为空串，走 /web_json_html 代理时自动带上前缀
+const BASE = location.pathname.replace(/\/test_[a-z_]+(\.html)?$/i, '');
+document.querySelectorAll('a.nav-link[href="/test_all"]').forEach(a => {
+  // 嵌在测试中心 iframe 里时隐藏返回链接，避免 iframe 内再嵌一层测试中心导致顶部重复
+  if (window.self !== window.top) { a.remove(); } else { a.href = BASE + '/test_all'; }
+});
+
+document.getElementById('baseUrl').value = location.origin;
+
+const JWT_SECRET = 'chatbi-jwt-secret-key-for-production-2026';
+const API = () => document.getElementById('baseUrl').value.trim().replace(/\/+$/, '') + BASE;
+let META = null;
+
+function b64url(bytes) {
+  let s = '';
+  new Uint8Array(bytes).forEach(b => s += String.fromCharCode(b));
+  return btoa(s).replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_');
+}
+
+// 纯 JS 版 HMAC-SHA256：非安全上下文（HTTP+IP 访问）下 crypto.subtle 为 undefined，用它兜底
+function sha256Bytes(bytes) {
+  const K = [
+    0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+  ];
+  const H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const len = bytes.length;
+  const padded = new Uint8Array((((len + 8) >> 6) + 1) * 64);
+  padded.set(bytes);
+  padded[len] = 0x80;
+  const dv = new DataView(padded.buffer);
+  const bitLen = len * 8;
+  dv.setUint32(padded.length - 8, Math.floor(bitLen / 4294967296));
+  dv.setUint32(padded.length - 4, bitLen >>> 0);
+  const w = new Int32Array(64);
+  const rr = (x, n) => (x >>> n) | (x << (32 - n));
+  for (let off = 0; off < padded.length; off += 64) {
+    for (let i = 0; i < 16; i++) w[i] = dv.getUint32(off + i * 4);
+    for (let i = 16; i < 64; i++) {
+      const s0 = rr(w[i-15], 7) ^ rr(w[i-15], 18) ^ (w[i-15] >>> 3);
+      const s1 = rr(w[i-2], 17) ^ rr(w[i-2], 19) ^ (w[i-2] >>> 10);
+      w[i] = (w[i-16] + s0 + w[i-7] + s1) | 0;
+    }
+    let a=H[0],b=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7];
+    for (let i = 0; i < 64; i++) {
+      const S1 = rr(e, 6) ^ rr(e, 11) ^ rr(e, 25);
+      const ch = (e & f) ^ (~e & g);
+      const t1 = (h + S1 + ch + K[i] + w[i]) | 0;
+      const S0 = rr(a, 2) ^ rr(a, 13) ^ rr(a, 22);
+      const maj = (a & b) ^ (a & c) ^ (b & c);
+      const t2 = (S0 + maj) | 0;
+      h=g; g=f; f=e; e=(d + t1)|0; d=c; c=b; b=a; a=(t1 + t2)|0;
+    }
+    H[0]=(H[0]+a)|0; H[1]=(H[1]+b)|0; H[2]=(H[2]+c)|0; H[3]=(H[3]+d)|0;
+    H[4]=(H[4]+e)|0; H[5]=(H[5]+f)|0; H[6]=(H[6]+g)|0; H[7]=(H[7]+h)|0;
+  }
+  const out = new Uint8Array(32);
+  const odv = new DataView(out.buffer);
+  for (let i = 0; i < 8; i++) odv.setUint32(i * 4, H[i] >>> 0);
+  return out;
+}
+
+function hmacSha256(keyBytes, msgBytes) {
+  const block = new Uint8Array(64);
+  block.set(keyBytes.length > 64 ? sha256Bytes(keyBytes) : keyBytes);
+  const inner = new Uint8Array(64 + msgBytes.length);
+  for (let i = 0; i < 64; i++) inner[i] = block[i] ^ 0x36;
+  inner.set(msgBytes, 64);
+  const outer = new Uint8Array(96);
+  for (let i = 0; i < 64; i++) outer[i] = block[i] ^ 0x5c;
+  outer.set(sha256Bytes(inner), 64);
+  return sha256Bytes(outer);
+}
+
+async function makeToken() {
+  const header = b64url(new TextEncoder().encode(JSON.stringify({alg:'HS256', typ:'JWT'})));
+  const payload = b64url(new TextEncoder().encode(JSON.stringify({
+    user_id: 'page-test', sub: 'page-test', exp: Math.floor(Date.now()/1000) + 3600,
+  })));
+  const keyBytes = new TextEncoder().encode(JWT_SECRET);
+  const data = new TextEncoder().encode(header + '.' + payload);
+  let sig;
+  if (window.crypto && crypto.subtle && crypto.subtle.importKey) {
+    const key = await crypto.subtle.importKey('raw', keyBytes, {name:'HMAC', hash:'SHA-256'}, false, ['sign']);
+    sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, data));
+  } else {
+    sig = hmacSha256(keyBytes, data);
+  }
+  return `${header}.${payload}.${b64url(sig)}`;
+}
+
+function showToast(msg, ok = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.background = ok ? '#f6ffed' : '#fff2f0';
+  el.style.borderColor = ok ? '#b7eb8f' : '#ffccc7';
+  clearTimeout(window.toastTimer);
+  window.toastTimer = setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+async function checkHealth() {
+  const el = document.getElementById('healthStatus');
+  try {
+    const r = await fetch(`${API()}/health`);
+    const j = await r.json();
+    el.innerHTML = `<span class="st-ok status-badge">OK</span> ${esc(j.status || '')}`;
+  } catch (e) {
+    el.innerHTML = `<span class="st-fail status-badge">DOWN</span> ${esc(e.message)}`;
+  }
+}
+
+async function loadMeta() {
+  if (META && document.getElementById('metaText') &&
+      document.getElementById('metaText').value !== JSON.stringify(META, null, 2)) {
+    const ok = await showModal('当前有未保存修改，重新加载将丢弃，确定？', true);
+    if (!ok) return;
+  }
+  const btn = document.getElementById('loadBtn');
+  const statusEl = document.getElementById('loadStatus');
+  btn.disabled = true; btn.textContent = '加载中...';
+  try {
+    const token = await makeToken();
+    const r = await fetch(`${API()}/api/v1/database-meta`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
+    const j = await r.json();
+    META = j.data || j;
+    renderStats();
+    renderTabs();
+    statusEl.innerHTML = `<span class="st-ok status-badge">已加载</span>`;
+  } catch (e) {
+    statusEl.innerHTML = `<span class="st-fail status-badge">失败</span> ${esc(e.message)}`;
+    showToast(`加载失败：${e.message}`);
+  } finally {
+    btn.disabled = false; btn.textContent = '重新加载';
+  }
+}
+
+function renderStats() {
+  const metrics = Array.isArray(META.available_metrics) ? META.available_metrics : [];
+  const dims = Array.isArray(META.available_dimensions) ? META.available_dimensions : [];
+  const tables = Array.isArray(META.table_summaries) ? META.table_summaries : [];
+  let colCount = 0;
+  tables.forEach(t => { colCount += (t.columns || []).length; });
+  const area = document.getElementById('statArea');
+  area.classList.remove('hidden');
+  document.getElementById('browseCard').classList.remove('hidden');
+  area.innerHTML = `
+    <div class="stat-item"><div class="num">${metrics.length}</div><div class="label">可用指标 available_metrics</div></div>
+    <div class="stat-item"><div class="num">${dims.length}</div><div class="label">可用维度 available_dimensions</div></div>
+    <div class="stat-item"><div class="num">${tables.length}</div><div class="label">数据表 table_summaries</div></div>
+    <div class="stat-item"><div class="num">${colCount}</div><div class="label">指标列（各表 columns 合计）</div></div>`;
+}
+
+function renderTabs() {
+  const metrics = Array.isArray(META.available_metrics) ? META.available_metrics : [];
+  const dims = Array.isArray(META.available_dimensions) ? META.available_dimensions : [];
+  const tables = Array.isArray(META.table_summaries) ? META.table_summaries : [];
+
+  document.getElementById('tabMetricsN').textContent = metrics.length;
+  document.getElementById('tabDimsN').textContent = dims.length;
+  document.getElementById('tabTablesN').textContent = tables.length;
+  document.getElementById('tabRawN').textContent = (JSON.stringify(META).length / 1024).toFixed(1) + 'K';
+
+  // JSON 原始数据（可编辑，带保存/放弃按钮）
+  document.getElementById('tab-raw').innerHTML = `
+    <div class="form-row" style="margin-top:10px; align-items:center;">
+      <button class="btn btn-primary" id="saveBtn" onclick="saveMeta()" disabled>保存</button>
+      <button class="btn btn-default" id="revertBtn" onclick="revertMeta()" disabled>放弃修改</button>
+      <span class="status-badge st-fail hidden" id="dirtyBadge">有未保存修改</span>
+      <span style="font-size:12px; color:#999;">保存覆盖 data/database_meta.json，需二次确认</span>
+    </div>
+    <textarea id="metaText" class="meta-editor" spellcheck="false"></textarea>`;
+  const ta = document.getElementById('metaText');
+  ta.value = JSON.stringify(META, null, 2);
+  ta.addEventListener('input', updateDirty);
+
+  // 指标表（database_meta.json 字段：metric_code/metric_name）
+  document.getElementById('tab-metrics').innerHTML = `
+    <table class="data">
+      <tr><th>code</th><th>名称</th><th>类型</th><th>单位</th><th>description</th></tr>
+      ${metrics.map(m => `<tr><td>${esc(m.metric_code || '')}</td><td>${esc(m.metric_name || '')}</td>
+        <td>${esc(m.metric_type || '')}</td><td>${esc(m.unit || '')}</td>
+        <td style="max-width:420px;">${esc(m.description || '')}</td></tr>`).join('')}
+    </table>`;
+
+  // 维度表（字段：dimension_code/dimension_name/possible_values）
+  document.getElementById('tab-dims').innerHTML = `
+    <table class="data">
+      <tr><th>code</th><th>名称</th><th>枚举值数</th><th>枚举值</th><th>description</th></tr>
+      ${dims.map(d => {
+        const vals = Array.isArray(d.possible_values) ? d.possible_values : [];
+        return `<tr><td>${esc(d.dimension_code || '')}</td><td>${esc(d.dimension_name || '')}</td>
+          <td>${vals.length}</td>
+          <td style="max-width:300px;">${vals.length ? esc(vals.join('、')) : '<span style="color:#999;">—</span>'}</td>
+          <td style="max-width:260px;">${esc(d.description || '')}</td></tr>`;
+      }).join('')}
+    </table>`;
+
+  // 表结构（字段：table_name/columns，列字段 column_name）
+  document.getElementById('tab-tables').innerHTML = tables.map(t => `
+    <div style="margin-bottom:14px;">
+      <b style="font-size:13px;">${esc(t.table_name || '')}</b>
+      <table class="data">
+        <tr><th>列名</th><th>类型</th><th>维度/度量</th><th>agg_type</th><th>description</th></tr>
+        ${(t.columns || []).map(c => `<tr>
+          <td>${esc(c.column_name || '')}</td>
+          <td>${esc(c.data_type || '')}</td>
+          <td>${c.is_dimension ? '维度' : ''}${c.is_measure ? '度量' : ''}</td>
+          <td>${c.agg_type ? `<span class="agg-${esc(c.agg_type)}">${esc(c.agg_type)}</span>` : '<span style="color:#999;">—</span>'}</td>
+          <td style="max-width:420px;">${esc(c.description || '')}</td></tr>`).join('')}
+      </table>
+    </div>`).join('');
+}
+
+function switchTab(btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.tabpane').forEach(p => p.classList.add('hidden'));
+  document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+}
+
+// ---------- 模态窗口（替代原生 alert/confirm） ----------
+function showModal(msg, ok = false) {
+  return new Promise(resolve => {
+    const mask = document.createElement('div');
+    mask.className = 'modal-mask';
+    mask.innerHTML = `
+      <div class="modal-box">
+        <div class="modal-msg">${esc(msg)}</div>
+        <div class="modal-btns">
+          ${ok ? '<button class="btn btn-default" data-r="0">取消</button>' : ''}
+          <button class="btn btn-primary" data-r="1">确定</button>
+        </div>
+      </div>`;
+    const close = r => { mask.remove(); document.body.style.overflow = ''; resolve(r); };
+    mask.addEventListener('click', e => {
+      if (e.target === mask || e.target.dataset.r !== undefined) close(Number(e.target.dataset.r || 0));
+    });
+    document.addEventListener('keydown', function h(e) {
+      if (e.key === 'Escape') { document.removeEventListener('keydown', h); close(0); }
+    });
+    document.body.style.overflow = 'hidden';
+    document.body.appendChild(mask);
+    mask.querySelector('[data-r="1"]').focus();
+  });
+}
+
+// ---------- 未保存修改标记 ----------
+function updateDirty() {
+  const dirty = document.getElementById('metaText').value !== JSON.stringify(META, null, 2);
+  document.getElementById('dirtyBadge').classList.toggle('hidden', !dirty);
+  document.getElementById('saveBtn').disabled = !dirty;
+  document.getElementById('revertBtn').disabled = !dirty;
+}
+
+async function revertMeta() {
+  const ok = await showModal('放弃当前修改，恢复为已加载内容？', true);
+  if (!ok) return;
+  document.getElementById('metaText').value = JSON.stringify(META, null, 2);
+  updateDirty();
+}
+
+async function saveMeta() {
+  const text = document.getElementById('metaText').value;
+  let obj;
+  try {
+    obj = JSON.parse(text);
+  } catch (e) {
+    await showModal(`JSON 格式错误，未保存：\n${e.message}`);
+    return;
+  }
+  const ok = await showModal(`将覆盖保存 data/database_meta.json，确定？`, true);
+  if (!ok) return;
+  const btn = document.getElementById('saveBtn');
+  const statusEl = document.getElementById('loadStatus');
+  btn.disabled = true;
+  try {
+    const token = await makeToken();
+    const r = await fetch(`${API()}/api/v1/database-meta`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: text,
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      throw new Error(j.message || `HTTP ${r.status} ${r.statusText}`);
+    }
+    META = obj;
+    document.getElementById('metaText').value = JSON.stringify(obj, null, 2);
+    updateDirty();
+    renderStats();
+    renderTabs();
+    statusEl.innerHTML = `<span class="st-ok status-badge">已保存</span>`;
+    showToast('保存成功', true);
+  } catch (e) {
+    statusEl.innerHTML = `<span class="st-fail status-badge">失败</span> ${esc(e.message)}`;
+    showToast(`保存失败：${e.message}`);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+checkHealth();
+loadMeta();
+</script>
+</body>
+</html>

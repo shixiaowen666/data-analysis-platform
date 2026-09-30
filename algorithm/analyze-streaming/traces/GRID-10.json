@@ -1,0 +1,37 @@
+{
+  "query_id": "GRID-10",
+  "query": "最近一年跳闸总数排名前五的调管机构有哪些？",
+  "timestamp": "2026-03-03T07:20:31.326779",
+  "pipeline_status": "success",
+  "strict_passed": true,
+  "fail_reason": "OK",
+  "answer": "最近一年跳闸总数排名前五的调管机构分别是：广东调度，跳闸总数为156次；云南调度，跳闸总数为132次；贵州调度，跳闸总数为98次；广西调度，跳闸总数为87次；海南调度，跳闸总数为45次。",
+  "elapsed_seconds": 12.44,
+  "execution_log": [
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_1",
+      "step_type": "query"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_2",
+      "step_type": "compute"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_3",
+      "step_type": "summarize"
+    }
+  ],
+  "data_summary": {
+    "row_count": 5,
+    "columns": [
+      "dispatch_org",
+      "total_trips"
+    ]
+  }
+}

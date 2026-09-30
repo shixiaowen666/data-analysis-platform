@@ -28,3 +28,16 @@ application-prod.yml
 
 # ---- AI / tool local cache ----
 .claude/
+
+# ---- python (algorithm/) ----
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+*.egg-info/
+algorithm/recall-service/logs/
+algorithm/recall-service/data/recall_service.db
+algorithm/recall-service/data/indexes/
+
+# analyze-streaming 的 .env 随原仓库一并纳入版本管理（用户确认无需脱敏）
+!algorithm/analyze-streaming/.env

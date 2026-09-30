@@ -1,0 +1,57 @@
+{
+  "query_id": "T28-ENERGY",
+  "query": "哪些场站年度可利用小时数低于公司均值？原因是什么？",
+  "category": "cause_analysis",
+  "description": "原因分析(analyze步骤)",
+  "timestamp": "2026-04-03T01:43:30.232874",
+  "pipeline_status": "success",
+  "validation_status": "PASS",
+  "validation_reason": "OK",
+  "new_features": {
+    "has_filter_in_decomposition": false,
+    "has_expected_table": false,
+    "compute_result_pushed": true,
+    "step_count": 4,
+    "step_types": [
+      "query",
+      "compute",
+      "analyze",
+      "summarize"
+    ]
+  },
+  "answer": "根据数据分析，年度可利用小时数低于公司均值的场站包括：华北风电场B（1850.0 h）、华东风电场D（1920.0 h）、华南光伏站E（1680.0 h）、华南光伏站F（1520.0 h）和西北风电场H（1780.0 h）。其中，公司整体均值未在数据中直接提供，但通过对比可见上述场站表现偏低。\n\n具体原因如下：\n\n- **华北风电场B** 可利用小时为 1850.0 h，显著低于同区域的华北风电场A（2150.0 h），主要原因为电网限电严重，其弃电率在2025年1月达8.5%、6月和12月均高达12.0%，明显高于周边场站，导致有风时段无法发电。\n  \n- **华南光伏站E** 可利用小时为 1680.0 h，虽处于光照资源较好的华南地区，且太阳辐照度在夏季达到峰值（2025-07为650 W/m²），但缺乏弃电率、故障次数（fault_count）和维护影响（maintenance_impact）等关键数据，初步判断可能与运维管理不善或设备隐性停机有关。\n\n- **华南光伏站F** 可利用小时仅为 1520.0 h，是所有场站中最低之一，比华南光伏站E还低160 h，在相同地理条件下差异显著。由于缺少 fault_count 和 maintenance_impact 数据，无法完全归因，但怀疑存在高故障率、频繁非计划停机及潜在限电问题。\n\n- **西北风电场H** 可利用小时为 1780.0 h，远低于理论应有水平（西北地区风资源丰富，通常可利用小时应在2000 h以上）。尽管全局风速数据显示冬季风况良好（2025-12: 7.1 m/s，2026-01: 7.5 m/s），但未提供该场站的弃电率和送出线路负载数据，结合区域特性，推测主因为区域性弃风限电和输电通道瓶颈。\n\n综上，受限于 fault_count 和 maintenance_impact 数据缺失，部分场站的原因分析存在不确定性，建议补充完整运行与调度数据以提升归因准确性。",
+  "elapsed_seconds": 75.83,
+  "execution_log": [
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_1",
+      "step_type": "query"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_2",
+      "step_type": "compute"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_3",
+      "step_type": "analyze"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_4",
+      "step_type": "summarize"
+    }
+  ],
+  "data_summary": {
+    "row_count": 4,
+    "columns": [
+      "station_name",
+      "available_hours"
+    ]
+  }
+}

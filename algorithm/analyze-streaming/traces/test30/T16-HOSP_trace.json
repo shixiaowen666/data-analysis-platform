@@ -1,0 +1,43 @@
+{
+  "query_id": "T16-HOSP",
+  "query": "心外2025年1月各科室次均耗材费用是多少？",
+  "category": "filter_query",
+  "description": "filter筛选(系统+时间)",
+  "timestamp": "2026-04-03T01:39:07.758838",
+  "pipeline_status": "success",
+  "validation_status": "PASS",
+  "validation_reason": "OK",
+  "new_features": {
+    "has_filter_in_decomposition": false,
+    "has_expected_table": false,
+    "compute_result_pushed": false,
+    "step_count": 2,
+    "step_types": [
+      "query",
+      "summarize"
+    ]
+  },
+  "answer": "2025年1月，心外相关科室的次均耗材费用如下：心脏外科为8500.0元，血管外科为6200.0元。",
+  "elapsed_seconds": 10.81,
+  "execution_log": [
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_1",
+      "step_type": "query"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_2",
+      "step_type": "summarize"
+    }
+  ],
+  "data_summary": {
+    "row_count": 2,
+    "columns": [
+      "department",
+      "avg_material_fee"
+    ]
+  }
+}

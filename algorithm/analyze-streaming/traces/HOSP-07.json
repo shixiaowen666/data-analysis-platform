@@ -1,0 +1,38 @@
+{
+  "query_id": "HOSP-07",
+  "query": "2025年6月心外系统各科室直接成本结余情况如何？",
+  "timestamp": "2026-03-03T07:22:41.946786",
+  "pipeline_status": "success",
+  "strict_passed": true,
+  "fail_reason": "OK",
+  "answer": "2025年6月，心外系统各科室的直接成本结余情况如下：心脏外科的直接成本为420.0万元，收入为492.0万元，结余为72.0万元；血管外科的直接成本为255.0万元，收入为293.0万元，结余为38.0万元。数据完整，无缺失。",
+  "elapsed_seconds": 17.04,
+  "execution_log": [
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_1",
+      "step_type": "query"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_2",
+      "step_type": "compute"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_3",
+      "step_type": "summarize"
+    }
+  ],
+  "data_summary": {
+    "row_count": 2,
+    "columns": [
+      "department",
+      "total_direct_cost_by_dept",
+      "total_surplus_by_dept"
+    ]
+  }
+}

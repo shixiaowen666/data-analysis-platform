@@ -1,0 +1,239 @@
+{
+  "timestamp": "2026-04-03 01:44:00",
+  "total": 30,
+  "pass": 28,
+  "partial": 0,
+  "fail": 2,
+  "pass_rate": "93.3%",
+  "total_time_seconds": 1252.6,
+  "avg_time_seconds": 41.8,
+  "domain_breakdown": {
+    "grid": {
+      "total": 10,
+      "pass": 10
+    },
+    "hospital": {
+      "total": 10,
+      "pass": 8
+    },
+    "energy": {
+      "total": 10,
+      "pass": 10
+    }
+  },
+  "new_features": {
+    "compute_result_push_count": 23
+  },
+  "results": [
+    {
+      "query_id": "T01-GRID",
+      "query": "目前乌东德的右岸电厂实际出力是多少？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 8.9
+    },
+    {
+      "query_id": "T02-GRID",
+      "query": "2024年西电东送电量多少？同比2023年增长多少？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 11.63
+    },
+    {
+      "query_id": "T03-GRID",
+      "query": "本月跳闸次数最多的是哪一天？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 10.98
+    },
+    {
+      "query_id": "T04-GRID",
+      "query": "近三日各省负荷率地调平均值分别是多少？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 14.01
+    },
+    {
+      "query_id": "T05-GRID",
+      "query": "今年全网的发电量是多少？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 9.48
+    },
+    {
+      "query_id": "T06-GRID",
+      "query": "本月新能源的最大出力是多少？是哪个省份？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 12.64
+    },
+    {
+      "query_id": "T07-GRID",
+      "query": "最近一年跳闸总数排名前五的调管机构有哪些？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 11.66
+    },
+    {
+      "query_id": "T08-GRID",
+      "query": "去年南方五省的发电量是多少？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 11.38
+    },
+    {
+      "query_id": "T09-GRID",
+      "query": "目前全网统调负荷是多少？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 8.15
+    },
+    {
+      "query_id": "T10-GRID",
+      "query": "停电时间与复电时间间隔2小时以上的有哪些？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 15.61
+    },
+    {
+      "query_id": "T11-HOSP",
+      "query": "2025年1-4月各科的哪部分成本增幅最大？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 27.47
+    },
+    {
+      "query_id": "T12-HOSP",
+      "query": "心内科收入结构如何？药占比、耗占比、医务性收入占比分别是什么水平？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 20.3
+    },
+    {
+      "query_id": "T13-HOSP",
+      "query": "门诊次均费用与住院次均费用分别是多少？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 9.98
+    },
+    {
+      "query_id": "T14-HOSP",
+      "query": "各科室药占比排名前三是哪些？",
+      "status": "FAIL",
+      "reason": "Pipeline status=error",
+      "elapsed": 346.29
+    },
+    {
+      "query_id": "T15-HOSP",
+      "query": "2025年6月心外系统各科室直接成本结余情况如何？",
+      "status": "FAIL",
+      "reason": "Pipeline status=error",
+      "elapsed": 430.53
+    },
+    {
+      "query_id": "T16-HOSP",
+      "query": "心外2025年1月各科室次均耗材费用是多少？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 10.81
+    },
+    {
+      "query_id": "T17-HOSP",
+      "query": "本月人力成本同比去年增加了多少？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 13.5
+    },
+    {
+      "query_id": "T18-HOSP",
+      "query": "综内2025年1-2月各科室住院次均费用明细如何？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 15.62
+    },
+    {
+      "query_id": "T19-HOSP",
+      "query": "2025年6月心内系统工作量与服务效率如何？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 24.11
+    },
+    {
+      "query_id": "T20-HOSP",
+      "query": "心内科平均住院天数与医疗服务效率情况？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 21.96
+    },
+    {
+      "query_id": "T21-ENERGY",
+      "query": "各场站年度可利用小时数是多少？哪些高于公司均值？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 15.94
+    },
+    {
+      "query_id": "T22-ENERGY",
+      "query": "各场站限电率是多少？排名前三是哪些？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 14.28
+    },
+    {
+      "query_id": "T23-ENERGY",
+      "query": "能量利用率连续三个月下降的场站有哪些？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 20.07
+    },
+    {
+      "query_id": "T24-ENERGY",
+      "query": "机组可利用率高于95%的风电场有哪些？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 11.24
+    },
+    {
+      "query_id": "T25-ENERGY",
+      "query": "同一风场发电量最低五台风机是哪些？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 16.06
+    },
+    {
+      "query_id": "T26-ENERGY",
+      "query": "湖北近五年风电利用小时数及同比增长率",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 16.27
+    },
+    {
+      "query_id": "T27-ENERGY",
+      "query": "2023-2025风电度电成本变化趋势如何？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 17.59
+    },
+    {
+      "query_id": "T28-ENERGY",
+      "query": "哪些场站年度可利用小时数低于公司均值？原因是什么？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 75.83
+    },
+    {
+      "query_id": "T29-ENERGY",
+      "query": "发电计划超发前两名、后两名分别是哪个场站？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 16.87
+    },
+    {
+      "query_id": "T30-ENERGY",
+      "query": "各子分公司风能利用率排名如何？",
+      "status": "PASS",
+      "reason": "OK",
+      "elapsed": 13.33
+    }
+  ]
+}

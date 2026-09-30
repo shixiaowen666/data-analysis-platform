@@ -1,0 +1,49 @@
+{
+  "query_id": "T08-GRID",
+  "query": "去年南方五省的发电量是多少？",
+  "category": "filter_query",
+  "description": "filter筛选(五省=多值)",
+  "timestamp": "2026-04-03T01:24:38.490194",
+  "pipeline_status": "success",
+  "validation_status": "PASS",
+  "validation_reason": "OK",
+  "new_features": {
+    "has_filter_in_decomposition": false,
+    "has_expected_table": false,
+    "compute_result_pushed": true,
+    "step_count": 3,
+    "step_types": [
+      "query",
+      "compute",
+      "summarize"
+    ]
+  },
+  "answer": "去年南方五省的发电量为685000.0万kWh。",
+  "elapsed_seconds": 11.38,
+  "execution_log": [
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_1",
+      "step_type": "query"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_2",
+      "step_type": "compute"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_3",
+      "step_type": "summarize"
+    }
+  ],
+  "data_summary": {
+    "row_count": 1,
+    "columns": [
+      "total_generation"
+    ]
+  }
+}

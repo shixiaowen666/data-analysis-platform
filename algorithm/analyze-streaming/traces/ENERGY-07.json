@@ -1,0 +1,38 @@
+{
+  "query_id": "ENERGY-07",
+  "query": "2023-2025风电度电成本变化趋势如何？",
+  "timestamp": "2026-03-03T07:25:26.826427",
+  "pipeline_status": "success",
+  "strict_passed": true,
+  "fail_reason": "OK",
+  "answer": "2023年至2025年，风电度电成本呈持续下降趋势。具体来看，2023年为0.285元/kWh，2024年降至0.268元/kWh，到2025年进一步下降至0.252元/kWh。数据显示，该趋势的斜率为-0.0165元/kWh/年，决定系数（R²）高达0.9997，表明成本下降趋势显著且拟合度极高。",
+  "elapsed_seconds": 13.62,
+  "execution_log": [
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_1",
+      "step_type": "query"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_2",
+      "step_type": "compute"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_3",
+      "step_type": "summarize"
+    }
+  ],
+  "data_summary": {
+    "row_count": 1,
+    "columns": [
+      "trend_direction",
+      "slope",
+      "r_squared"
+    ]
+  }
+}

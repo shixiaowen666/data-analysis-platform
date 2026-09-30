@@ -1,0 +1,210 @@
+{
+  "updated_at": "2026-09-24T22:54:21",
+  "meta_hash": "c17465e3ebb3258445a4fb92baab6b199d7fbe47baba5ee951128bf51ea6c9b9",
+  "model": "qwen3-235b-a22b-instruct-2507",
+  "results": {
+    "dims": [
+      {
+        "key": "ele_user_category",
+        "value": "用电户类型，区分用户用电性质，含4类取值。"
+      },
+      {
+        "key": "trade_sort_code",
+        "value": "行业编码，用于标识产业分类的唯一代码。"
+      },
+      {
+        "key": "trade_sort_name",
+        "value": "产业名称，展示用的行业分类名称，约8个取值。"
+      },
+      {
+        "key": "data_time_str",
+        "value": "带时分秒的时间戳，精确到毫秒级别。"
+      },
+      {
+        "key": "month",
+        "value": "月份，由日期衍生的月度聚合维度。"
+      },
+      {
+        "key": "quarter",
+        "value": "季度，由日期衍生的季度聚合维度。"
+      },
+      {
+        "key": "weekofyear",
+        "value": "年周号，按周聚合的时间维度，取值1-53。"
+      },
+      {
+        "key": "year",
+        "value": "年份，由日期衍生的年度聚合维度。"
+      },
+      {
+        "key": "daymaxloadtimesupply",
+        "value": "供电量日最大负荷时间，精确到分钟的时间点。"
+      },
+      {
+        "key": "max_load_time",
+        "value": "用电量最大负荷时间，精确到分钟的时间点。"
+      },
+      {
+        "key": "electricitytype",
+        "value": "线路类型名称，标识输电线路电压等级，约5个取值。"
+      },
+      {
+        "key": "sort_name",
+        "value": "四可数据类型名称，表示可观可测可调可控类型，约5个取值。"
+      }
+    ],
+    "metrics": [
+      {
+        "key": "grid_power",
+        "value": "网供电量，单位亿千瓦时，指由上级电网输送至本区域的电量。"
+      },
+      {
+        "key": "usercount",
+        "value": "用电户用户数，单位户，指各类用电客户的总户数。"
+      },
+      {
+        "key": "max_load",
+        "value": "用电量最大负荷，指用电负荷在统计周期内的峰值。"
+      },
+      {
+        "key": "line_count",
+        "value": "线路总条数，单位条，指电网中各类输电线路的总数。"
+      },
+      {
+        "key": "statistic0200",
+        "value": "线路总条数，单位条，指系统内所有线路的总数。"
+      },
+      {
+        "key": "ta_num",
+        "value": "月分台区台区数，单位个，指当月参与线损统计的台区数量。"
+      },
+      {
+        "key": "abnor_num_rate_temp",
+        "value": "月分台区异常率，单位%，指当月线损异常台区占总台区的比例。"
+      },
+      {
+        "key": "line_num",
+        "value": "月分线线路数，单位条，指当月参与线损统计的线路数量。"
+      }
+    ],
+    "tables": [
+      {
+        "key": "view_gdl",
+        "value": "供电量表-市级区级供电量表记录每日各市、区级单位的供电量数据，用于统计日、月、年累计供电情况，反映区域供电能力。"
+      },
+      {
+        "key": "view_yongdian_user_scale",
+        "value": "用电户规模视图表按客户类型统计用户数、合同容量和覆盖率，反映不同类别用户的用电规模和发展趋势，支撑客户服务规划。"
+      },
+      {
+        "key": "view_electricity_auto_copy_rate_home",
+        "value": "用电管理_系统首页_自动抄表率表记录各类用户自动抄表成功率，用于评估计量自动化水平，不包含公变客户相关合同信息。"
+      },
+      {
+        "key": "view_electricity_total_overview_11_industry_rank",
+        "value": "用电管理_用电量总览_行业电量排名表列出各行业的用电量排序，直观展示高耗能行业分布，辅助制定差别化用电政策。"
+      },
+      {
+        "key": "view_dashboard_industry_expansion_stats",
+        "value": "用电管理_系统首页_业扩电量统计表汇总业扩新增用户数和容量，反映用电增长潜力，不涉及现有用电户规模数据。"
+      },
+      {
+        "key": "view_elec_supply_overview_composition_energy",
+        "value": "用电管理_供电量总览_电量二级构成_地方电厂电量_能源表按能源类型分解本地电厂发电量，如燃气、燃煤、光伏等，体现能源结构多样性。"
+      },
+      {
+        "key": "view_elec_supply_overview_composition_voltage_level",
+        "value": "用电管理_供电量总览_电量二级构成_地方电厂电量_电压等级表按电压等级划分地方电厂输出电量，用于评估不同电压层级的供电贡献。"
+      },
+      {
+        "key": "view_Management_LineLoss_ManagementView_ZoneLineLossStatistics_ZoneLineLossRate",
+        "value": "管理线损_管理视图_分区线损统计_分区线损率表记录各地区线损率，用于考核区域线损管理水平，不含深圳供电局整体数据。"
+      },
+      {
+        "key": "view_ComprehensiveEnergy_DistributedPVManagementView_FourKurablePieChart",
+        "value": "综合能源_分布式光伏管理视图_四可饼图表统计四可（可观、可测、可调、可控）用户总数及公变专变分布，不包含具体光伏用户信息。"
+      },
+      {
+        "key": "view_pq_voltage_alarm_stats",
+        "value": "电能质量_总览_电压告警统计表汇总暂升、暂降、中断、闪变等电压异常事件次数，用于分析电能质量问题发生频率和影响范围。"
+      },
+      {
+        "key": "view_electricity_management_overview_total_social_consumption_stats",
+        "value": "全社会产业用电量统计表，每行代表某一产业类别的用电总量，用于宏观分析全行业与居民用电结构。"
+      },
+      {
+        "key": "view_line_loss_substation_fenqu",
+        "value": "分区线损统计表，每行反映深圳某一供电分区的整体线损及电量流转，用于区域级线损考核与阈值监控。"
+      },
+      {
+        "key": "view_hydwsdb_mk_mc_user_scale",
+        "value": "全量用户规模表，每行展示各区局各类用户（含趸售）的数量与容量，用于全面掌握服务对象构成。"
+      },
+      {
+        "key": "view_mk_mc_archive_scale_stat",
+        "value": "档案规模统计表，每行展示各区供电局的设备、终端、电表等资源总数，用于反映各单位资产管理体量。"
+      },
+      {
+        "key": "view_mk_mc_integrity_rate",
+        "value": "自动抄表率表，每行记录电厂户等特定用户群的数据完整率，用于评估抄表系统运行质量。"
+      },
+      {
+        "key": "view_Data_Collection_Completeness_Rate",
+        "value": "采集完整率报表，每行反映某类数据项的整体抄读成功率，用于判断数据链路的稳定性与完整性。"
+      },
+      {
+        "key": "view_data_completeness_rate_user_plant",
+        "value": "用户/电厂数据完整率表，每行独立计算用户侧或电厂侧的数据采集完整率，用于区分两类主体的数据质量表现。"
+      },
+      {
+        "key": "view_terminal_time_correction_stats",
+        "value": "终端校时统计表，每行汇总各类终端的时钟合格情况，用于保障计量设备时间同步的准确性。"
+      },
+      {
+        "key": "view_Copypower_usage_mgmt_power_consumption_overview_top100_enterprise_power_consumption",
+        "value": "前百强企业用电量表，每行代表一家深圳企业的用电排名与数值，用于重点用户用电行为分析。"
+      },
+      {
+        "key": "view_management_view_mgmt_line_loss_month",
+        "value": "管理线损月度汇总表，每行记录某分区或台区在整月的线损结果，用于替代日粒度数据进行月度考核。"
+      },
+      {
+        "key": "view_mll_mv_psll_mt",
+        "value": "分台线损月表，每行存储每月各台区线损率及异常状态，专用于月度颗粒度的台区线损分析。"
+      },
+      {
+        "key": "view_mll_mv_plll_mt_month",
+        "value": "分线线损月表，每行表示一条线路在整月的平均线损，用于线路层级的月度绩效评估。"
+      },
+      {
+        "key": "view_mgmt_line_loss_volt_month",
+        "value": "分压线损月表，每行按电压等级聚合月度线损数据，用于长期观察不同电压等级的损耗变化趋势。"
+      },
+      {
+        "key": "view_ml_mv_hl_trend_month",
+        "value": "管理线损高损线路趋势月表，每条记录代表一个区局某月的高损线路数量及线损率，用于分析月度高损线路变化趋势，与日级表相比侧重长期走势而非单日波动。"
+      },
+      {
+        "key": "view_ml_mv_hl_area_ratio_month",
+        "value": "管理线损高损台区占比月表，每条记录反映一个供电单位每月高损台区占总台区的比例，用于评估台区线损治理成效，区别于线路类指标，聚焦配电变压器层级。"
+      },
+      {
+        "key": "view_mk_mc_ml_negative_loss_area_ratio_m",
+        "value": "负损台区占比月度统计表，每条记录表示某单位每月负损台区在全部台区中的占比，用于监控异常负损情况，与高损表互为补充，共同衡量台区线损健康度。"
+      },
+      {
+        "key": "view_mk_mc_ml_negative_loss_line_ratio_month",
+        "value": "负损线路占比月表，每条记录展示某区局每月负损线路占全部线路的比例，用于识别电量倒送等异常现象，和负损台区表分别从线路与台区两个维度反映负损问题。"
+      },
+      {
+        "key": "view_mgmt_line_loss_branch_io_elec",
+        "value": "各区局分区输入输出电量表，每条记录为某个区局某日的总输入与输出电量，用于计算分区线损基础数据，不涉及分压或分台细节，是线损汇总的核心来源之一。"
+      },
+      {
+        "key": "view_power_list",
+        "value": "企业用电量明细表，每条记录代表一个企业某日的用电量及行业信息，用于展示百强企业用电排名和行业分布，包含具体企业名称，区别于仅统计总量的汇总表。"
+      }
+    ],
+    "knowledge": []
+  }
+}

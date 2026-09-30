@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据库管理测试</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; color: #333; display: flex; justify-content: center; }
+.container { max-width: 1100px; width: 100%; }
+h1 { margin-bottom: 20px; font-size: 22px; }
+.nav-link { font-size: 13px; color: #1677ff; text-decoration: none; margin-bottom: 16px; display: inline-block; }
+.card { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 16px; }
+.card h2 { font-size: 16px; margin-bottom: 12px; color: #1a1a1a; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+.form-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; align-items: flex-end; }
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group label { font-size: 12px; color: #666; }
+.form-group input, .form-group select { padding: 6px 10px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; outline: none; }
+.form-group input:focus, .form-group select:focus { border-color: #1677ff; }
+.btn { padding: 7px 16px; border: none; border-radius: 4px; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+.btn-primary { background: #1677ff; color: #fff; }
+.btn-primary:hover { background: #4096ff; }
+.btn-default { background: #fff; color: #333; border: 1px solid #d9d9d9; }
+.btn-default:hover { border-color: #1677ff; color: #1677ff; }
+.btn-danger { background: #ff4d4f; color: #fff; }
+.btn-danger:hover { background: #ff7875; }
+.btn-success { background: #52c41a; color: #fff; }
+.btn-success:hover { background: #73d13d; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.result { background: #fafafa; border: 1px solid #e8e8e8; border-radius: 4px; padding: 12px; font-size: 12px; font-family: 'Consolas', 'Menlo', monospace; white-space: pre-wrap; max-height: 420px; overflow-y: auto; margin-top: 10px; }
+.status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+.badge-ok { background: #f6ffed; color: #52c41a; }
+.badge-miss { background: #fff2f0; color: #ff4d4f; }
+.badge-fail { background: #fff7e6; color: #fa8c16; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+th { background: #fafafa; font-weight: 500; color: #666; white-space: nowrap; }
+td.cell { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'Consolas', 'Menlo', monospace; font-size: 12px; }
+.pagination { display: flex; gap: 8px; align-items: center; margin-top: 12px; font-size: 13px; }
+.pagination span { color: #666; }
+#sqlText { width: 100%; height: 180px; padding: 10px; border: 1px solid #d9d9d9; border-radius: 4px; font-family: 'Consolas', 'Menlo', monospace; font-size: 13px; resize: vertical; outline: none; }
+#sqlText:focus { border-color: #1677ff; }
+.hint { font-size: 12px; color: #999; margin-top: 6px; }
+.conn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px 16px; font-size: 13px; }
+.conn-grid b { color: #666; font-weight: 500; }
+/* ===== Modal ===== */
+.modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+.modal { background: #fff; border-radius: 8px; width: 560px; max-width: 92vw; max-height: 82vh; display: flex; flex-direction: column; box-shadow: 0 6px 24px rgba(0,0,0,0.18); }
+.modal-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid #eee; }
+.modal-head h3 { font-size: 15px; font-weight: 600; }
+.modal-close { border: none; background: none; font-size: 18px; cursor: pointer; color: #999; padding: 2px 6px; }
+.modal-close:hover { color: #333; }
+.modal-body { padding: 14px 18px; overflow-y: auto; font-size: 13px; line-height: 1.7; }
+.modal-body pre { background: #fafafa; border: 1px solid #e8e8e8; border-radius: 4px; padding: 12px; font-size: 12px; font-family: 'Consolas', 'Menlo', monospace; white-space: pre-wrap; word-break: break-all; max-height: 320px; overflow-y: auto; }
+.modal-foot { padding: 12px 18px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 8px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>🗄️ 数据库管理 - 功能测试</h1>
+<a class="nav-link" href="/test_all">← 返回测试中心</a>
+
+<!-- 1. 连接信息与表状态 -->
+<div class="card">
+  <h2>1. 连接信息与表状态（/api/v1/db/info）</h2>
+  <div class="form-row">
+    <button class="btn btn-primary" onclick="loadInfo()">刷新状态</button>
+    <button class="btn btn-success" onclick="ensureTables()">一键创建数据库与表</button>
+    <span id="infoStatus" style="align-self: center; font-size: 13px;"></span>
+  </div>
+  <div id="connInfo" class="conn-grid" style="margin-bottom:12px;"></div>
+  <div id="tableStatus"></div>
+  <div id="ensureResult"></div>
+</div>
+
+<!-- 2. 表结构 -->
+<div class="card">
+  <h2>2. 表结构（/api/v1/db/table?mode=schema）</h2>
+  <div class="form-row">
+    <div class="form-group">
+      <label>表名</label>
+      <select id="schemaTable" style="width:220px"></select>
+    </div>
+    <div class="form-group" style="align-self: flex-end;">
+      <button class="btn btn-primary" onclick="loadSchema()">查看结构</button>
+    </div>
+  </div>
+  <div id="schemaResult"></div>
+</div>
+
+<!-- 3. 数据浏览 -->
+<div class="card">
+  <h2>3. 数据浏览（/api/v1/db/table?mode=rows）</h2>
+  <div class="form-row">
+    <div class="form-group">
+      <label>表名</label>
+      <select id="rowsTable" style="width:220px"></select>
+    </div>
+    <div class="form-group">
+      <label>关键字（任意列模糊匹配）</label>
+      <input id="rowsKeyword" style="width:200px" placeholder="留空查全部">
+    </div>
+    <div class="form-group">
+      <label>每页条数</label>
+      <input id="rowsPageSize" type="number" value="20" min="1" max="100" style="width:70px">
+    </div>
+    <div class="form-group" style="align-self: flex-end;">
+      <button class="btn btn-primary" onclick="loadRows(1)">查询</button>
+    </div>
+  </div>
+  <div id="rowsResult"></div>
+</div>
+
+<!-- 4. SQL 脚本执行 -->
+<div class="card">
+  <h2>4. SQL 脚本执行（/api/v1/db/sql）</h2>
+  <div class="form-row">
+    <div class="form-group" style="align-self: flex-end;">
+      <input type="file" id="sqlFile" accept=".sql,.txt">
+    </div>
+    <div class="form-group" style="align-self: flex-end;">
+      <button class="btn btn-default" onclick="loadSqlFile()">读取文件到输入框</button>
+      <button class="btn btn-danger" onclick="runSql()">执行脚本</button>
+    </div>
+  </div>
+  <textarea id="sqlText" placeholder="-- 粘贴 SQL 脚本（全量或增量均可），以分号分隔语句
+-- 支持 -- / # / /* */ 注释
+CREATE TABLE IF NOT EXISTS demo (id INT PRIMARY KEY);"></textarea>
+  <div class="hint">逐条执行；单条失败不影响后续语句。检测到 DROP/TRUNCATE/无 WHERE 的 DELETE 时会弹窗确认。单次上限 2MB / 200 条。</div>
+  <div id="sqlResult"></div>
+</div>
+
+</div>
+
+<script>
+// nginx 前缀代理支持：直连 5000 时 BASE 为空串，走 /web_json_html 代理时自动带上前缀
+const BASE = location.pathname.replace(/\/test_[a-z_]+(\.html)?$/i, '');
+document.querySelectorAll('a.nav-link[href="/test_all"]').forEach(a => {
+  // 嵌在测试中心 iframe 里时隐藏返回链接，避免 iframe 内再嵌一层测试中心导致顶部重复
+  if (window.self !== window.top) { a.remove(); } else { a.href = BASE + '/test_all'; }
+});
+
+const API = () => location.origin + BASE;
+
+// ===== 测试页鉴权：本地签发测试 JWT，自动注入所有请求 =====
+const JWT_SECRET = 'chatbi-jwt-secret-key-for-production-2026';
+
+function b64url(bytes) {
+  let s = '';
+  new Uint8Array(bytes).forEach(b => s += String.fromCharCode(b));
+  return btoa(s).replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_');
+}
+
+// 纯 JS 版 HMAC-SHA256：非安全上下文（HTTP+IP 访问）下 crypto.subtle 为 undefined，用它兜底
+function sha256Bytes(bytes) {
+  const K = [
+    0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+  ];
+  const H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const len = bytes.length;
+  const padded = new Uint8Array((((len + 8) >> 6) + 1) * 64);
+  padded.set(bytes);
+  padded[len] = 0x80;
+  const dv = new DataView(padded.buffer);
+  const bitLen = len * 8;
+  dv.setUint32(padded.length - 8, Math.floor(bitLen / 4294967296));
+  dv.setUint32(padded.length - 4, bitLen >>> 0);
+  const w = new Int32Array(64);
+  const rr = (x, n) => (x >>> n) | (x << (32 - n));
+  for (let off = 0; off < padded.length; off += 64) {
+    for (let i = 0; i < 16; i++) w[i] = dv.getUint32(off + i * 4);
+    for (let i = 16; i < 64; i++) {
+      const s0 = rr(w[i-15], 7) ^ rr(w[i-15], 18) ^ (w[i-15] >>> 3);
+      const s1 = rr(w[i-2], 17) ^ rr(w[i-2], 19) ^ (w[i-2] >>> 10);
+      w[i] = (w[i-16] + s0 + w[i-7] + s1) | 0;
+    }
+    let a=H[0],b=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7];
+    for (let i = 0; i < 64; i++) {
+      const S1 = rr(e, 6) ^ rr(e, 11) ^ rr(e, 25);
+      const ch = (e & f) ^ (~e & g);
+      const t1 = (h + S1 + ch + K[i] + w[i]) | 0;
+      const S0 = rr(a, 2) ^ rr(a, 13) ^ rr(a, 22);
+      const maj = (a & b) ^ (a & c) ^ (b & c);
+      const t2 = (S0 + maj) | 0;
+      h=g; g=f; f=e; e=(d + t1)|0; d=c; c=b; b=a; a=(t1 + t2)|0;
+    }
+    H[0]=(H[0]+a)|0; H[1]=(H[1]+b)|0; H[2]=(H[2]+c)|0; H[3]=(H[3]+d)|0;
+    H[4]=(H[4]+e)|0; H[5]=(H[5]+f)|0; H[6]=(H[6]+g)|0; H[7]=(H[7]+h)|0;
+  }
+  const out = new Uint8Array(32);
+  const odv = new DataView(out.buffer);
+  for (let i = 0; i < 8; i++) odv.setUint32(i * 4, H[i] >>> 0);
+  return out;
+}
+
+function hmacSha256(keyBytes, msgBytes) {
+  const block = new Uint8Array(64);
+  block.set(keyBytes.length > 64 ? sha256Bytes(keyBytes) : keyBytes);
+  const inner = new Uint8Array(64 + msgBytes.length);
+  for (let i = 0; i < 64; i++) inner[i] = block[i] ^ 0x36;
+  inner.set(msgBytes, 64);
+  const outer = new Uint8Array(96);
+  for (let i = 0; i < 64; i++) outer[i] = block[i] ^ 0x5c;
+  outer.set(sha256Bytes(inner), 64);
+  return sha256Bytes(outer);
+}
+
+async function makeToken() {
+  const header = b64url(new TextEncoder().encode(JSON.stringify({alg:'HS256', typ:'JWT'})));
+  const payload = b64url(new TextEncoder().encode(JSON.stringify({
+    user_id: 'page-test', sub: 'page-test', exp: Math.floor(Date.now()/1000) + 3600,
+  })));
+  const keyBytes = new TextEncoder().encode(JWT_SECRET);
+  const data = new TextEncoder().encode(header + '.' + payload);
+  let sig;
+  if (window.crypto && crypto.subtle && crypto.subtle.importKey) {
+    const key = await crypto.subtle.importKey('raw', keyBytes, {name:'HMAC', hash:'SHA-256'}, false, ['sign']);
+    sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, data));
+  } else {
+    sig = hmacSha256(keyBytes, data);
+  }
+  return `${header}.${payload}.${b64url(sig)}`;
+}
+
+const _origFetch = window.fetch;
+window.fetch = async function (input, init) {
+  const token = await makeToken();
+  init = init ? { ...init } : {};
+  const headers = new Headers(init.headers || (input instanceof Request ? input.headers : {}));
+  headers.set('Authorization', `Bearer ${token}`);
+  init.headers = headers;
+  return _origFetch.call(this, input, init);
+};
+
+// ===== 通用 Modal（Promise 封装，替代原生 alert/confirm/prompt）=====
+
+function showModal({ title, bodyHtml, okText = '确定', cancelText = null, danger = false }) {
+  return new Promise(resolve => {
+    document.querySelectorAll('.modal-mask').forEach(m => m.remove());
+    const mask = document.createElement('div');
+    mask.className = 'modal-mask';
+    mask.innerHTML = `<div class="modal">
+      <div class="modal-head"><h3></h3>
+        <button class="modal-close">✕</button></div>
+      <div class="modal-body"></div>
+      <div class="modal-foot">
+        ${cancelText ? `<button class="btn btn-default" data-act="cancel">${esc(cancelText)}</button>` : ''}
+        <button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" data-act="ok">${esc(okText)}</button>
+      </div>
+    </div>`;
+    mask.querySelector('h3').textContent = title;
+    mask.querySelector('.modal-body').innerHTML = bodyHtml;
+    const done = val => { mask.remove(); document.removeEventListener('keydown', onKey); resolve(val); };
+    const onKey = e => { if (e.key === 'Escape') done(false); };
+    mask.addEventListener('click', e => { if (e.target === mask) done(false); });
+    mask.querySelector('.modal-close').onclick = () => done(false);
+    mask.querySelector('[data-act="ok"]').onclick = () => done(true);
+    const cancelBtn = mask.querySelector('[data-act="cancel"]');
+    if (cancelBtn) cancelBtn.onclick = () => done(false);
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(mask);
+  });
+}
+
+async function alertModal(title, bodyHtml) {
+  await showModal({ title, bodyHtml, okText: '知道了' });
+}
+
+// ===== 1. 连接信息与表状态 =====
+let TABLES = [];
+
+async function loadInfo() {
+  const el = document.getElementById('infoStatus');
+  const conn = document.getElementById('connInfo');
+  const ts = document.getElementById('tableStatus');
+  el.innerHTML = '<span style="color:#999">查询中...</span>';
+  conn.innerHTML = ''; ts.innerHTML = '';
+  try {
+    const r = await fetch(`${API()}/api/v1/db/info`);
+    const j = await r.json();
+    if (j.code !== 200) {
+      el.innerHTML = `<span class="status-badge badge-miss">连接失败</span>`;
+      await alertModal('数据库连接失败', `<pre>${esc(j.message || '')}</pre>`);
+      return;
+    }
+    const d = j.data;
+    el.innerHTML = d.database_exists === false
+      ? `<span class="status-badge badge-miss">数据库不存在</span>`
+      : `<span class="status-badge badge-ok">已连接</span>`;
+    conn.innerHTML = ['host', 'port', 'user', 'database', 'password']
+      .map(k => `<span><b>${k}</b>：${esc(d[k])}</span>`).join('');
+    TABLES = d.tables || [];
+    const opts = TABLES.map(t => `<option value="${esc(t.name)}">${esc(t.name)}</option>`).join('');
+    document.getElementById('schemaTable').innerHTML = opts;
+    document.getElementById('rowsTable').innerHTML = opts;
+    let html = '<table><tr><th>表名</th><th>状态</th></tr>';
+    TABLES.forEach(t => {
+      html += `<tr><td>${esc(t.name)}</td><td>${
+        t.exists
+          ? '<span class="status-badge badge-ok">已存在</span>'
+          : '<span class="status-badge badge-miss">缺失</span>'
+      }</td></tr>`;
+    });
+    html += '</table>';
+    if (d.database_exists === false) {
+      html = `<div style="background:#fff2f0;border:1px solid #ffccc7;border-radius:4px;
+        padding:10px 14px;margin-bottom:12px;font-size:13px;color:#cf1322;">
+        数据库 <b>${esc(d.database)}</b> 在 ${esc(d.host)}:${esc(d.port)} 上不存在，
+        点击上方「一键创建数据库与表」按钮创建（需要账号有 CREATE 权限）。</div>` + html;
+    }
+    ts.innerHTML = html;
+  } catch (e) {
+    el.innerHTML = `<span class="status-badge badge-miss">请求失败</span>`;
+    await alertModal('请求失败', `<pre>${esc(e.message)}</pre>`);
+  }
+}
+
+async function ensureTables() {
+  const ok = await showModal({
+    title: '创建数据库、缺失表并初始化',
+    bodyHtml: `将按顺序执行（均幂等，已有库表不受影响）：<br>
+      <ul style="padding-left:20px;margin:8px 0;">
+        <li>CREATE DATABASE（库已存在则跳过；需要账号有 CREATE 权限）</li>
+        <li>创建 5 张缺失表（均为 IF NOT EXISTS）</li>
+        <li>播种默认提示词分组与初始版本数据</li>
+        <li>回填历史日志记录</li>
+      </ul>确定执行？`,
+    okText: '开始创建', cancelText: '取消',
+  });
+  if (!ok) return;
+  const el = document.getElementById('ensureResult');
+  el.innerHTML = '<div class="result">创建中...</div>';
+  try {
+    const r = await fetch(`${API()}/api/v1/db/ensure-tables`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    });
+    const j = await r.json();
+    if (j.code !== 200) {
+      el.innerHTML = `<div class="result" style="color:#ff4d4f">${esc(j.message || '执行失败')}</div>`;
+      return;
+    }
+    let html = `<div style="font-size:13px;margin-bottom:8px;">
+      <span class="status-badge ${j.data.success ? 'badge-ok' : 'badge-fail'}">
+        ${j.data.success ? '全部就绪' : '部分失败'}</span></div>`;
+    html += '<table><tr><th>步骤</th><th>结果</th></tr>';
+    (j.data.steps || []).forEach(s => {
+      html += `<tr><td>${esc(s.step)}</td><td>${
+        s.status === 'success'
+          ? '<span class="status-badge badge-ok">成功</span>'
+          : `<span class="status-badge badge-miss">失败</span> <span style="color:#ff4d4f;font-size:12px">${esc(s.error || '')}</span>`
+      }</td></tr>`;
+    });
+    html += '</table>';
+    el.innerHTML = `<div class="result">${html}</div>`;
+    loadInfo();
+  } catch (e) {
+    el.innerHTML = `<div class="result" style="color:#ff4d4f">请求失败: ${esc(e.message)}</div>`;
+  }
+}
+
+// ===== 2. 表结构 =====
+async function loadSchema() {
+  const table = document.getElementById('schemaTable').value;
+  const el = document.getElementById('schemaResult');
+  el.innerHTML = '<span style="color:#999">查询中...</span>';
+  try {
+    const r = await fetch(`${API()}/api/v1/db/table?name=${encodeURIComponent(table)}&mode=schema`);
+    const j = await r.json();
+    if (j.code !== 200) {
+      el.innerHTML = `<span style="color:#ff4d4f">错误: ${esc(j.message || '')}</span>`;
+      return;
+    }
+    let html = '<table><tr><th>字段</th><th>类型</th><th>允许空</th><th>键</th><th>默认值</th><th>Extra</th></tr>';
+    (j.data.schema || []).forEach(c => {
+      html += `<tr><td>${esc(c.Field)}</td><td>${esc(c.Type)}</td><td>${esc(c.Null)}</td><td>${esc(c.Key || '')}</td><td>${c.Default === null ? '<i style="color:#999">NULL</i>' : esc(c.Default)}</td><td>${esc(c.Extra || '')}</td></tr>`;
+    });
+    html += '</table>';
+    el.innerHTML = html;
+  } catch (e) {
+    el.innerHTML = `<span style="color:#ff4d4f">请求失败: ${esc(e.message)}</span>`;
+  }
+}
+
+// ===== 3. 数据浏览 =====
+async function loadRows(page) {
+  const table = document.getElementById('rowsTable').value;
+  const keyword = document.getElementById('rowsKeyword').value.trim();
+  const pageSize = parseInt(document.getElementById('rowsPageSize').value) || 20;
+  const el = document.getElementById('rowsResult');
+  el.innerHTML = '<span style="color:#999">查询中...</span>';
+  try {
+    const url = `${API()}/api/v1/db/table?name=${encodeURIComponent(table)}&mode=rows`
+      + `&page=${page}&page_size=${pageSize}&keyword=${encodeURIComponent(keyword)}`;
+    const r = await fetch(url);
+    const j = await r.json();
+    if (j.code !== 200) {
+      el.innerHTML = `<span style="color:#ff4d4f">错误: ${esc(j.message || '')}</span>`;
+      return;
+    }
+    const d = j.data;
+    const rows = d.rows || [];
+    if (!rows.length) {
+      el.innerHTML = '<span style="color:#999">暂无数据</span>';
+      return;
+    }
+    const cols = Object.keys(rows[0]);
+    const totalPages = Math.max(1, Math.ceil(d.total / d.page_size));
+    let html = `<div style="font-size:13px;margin-bottom:8px;">共 <b>${d.total}</b> 行，第 <b>${d.page}</b> / ${totalPages} 页</div>`;
+    html += '<div style="overflow-x:auto;"><table><tr>' + cols.map(c => `<th>${esc(c)}</th>`).join('') + '</tr>';
+    rows.forEach(row => {
+      html += '<tr>' + cols.map(c => {
+        let v = row[c];
+        if (v === null || v === undefined) return '<td style="color:#bbb">NULL</td>';
+        if (typeof v === 'object') v = JSON.stringify(v);
+        return `<td class="cell" title="${escAttr(String(v))}">${esc(String(v))}</td>`;
+      }).join('') + '</tr>';
+    });
+    html += '</table></div>';
+    html += '<div class="pagination">';
+    html += `<button class="btn btn-default" ${page <= 1 ? 'disabled' : ''} onclick="loadRows(${page - 1})">上一页</button>`;
+    html += `<span>${page} / ${totalPages}</span>`;
+    html += `<button class="btn btn-default" ${page >= totalPages ? 'disabled' : ''} onclick="loadRows(${page + 1})">下一页</button>`;
+    html += '</div>';
+    el.innerHTML = html;
+  } catch (e) {
+    el.innerHTML = `<span style="color:#ff4d4f">请求失败: ${esc(e.message)}</span>`;
+  }
+}
+
+// ===== 4. SQL 脚本执行 =====
+async function loadSqlFile() {
+  const input = document.getElementById('sqlFile');
+  if (!input.files || !input.files.length) {
+    await alertModal('提示', '请先选择 .sql 文件');
+    return;
+  }
+  const text = await input.files[0].text();
+  document.getElementById('sqlText').value = text;
+}
+
+const HIGH_RISK_RE = /\b(DROP|TRUNCATE)\b/i;
+const DELETE_NO_WHERE_RE = /\bDELETE\s+FROM\s+\S+\s*;?\s*$/i;
+
+async function runSql() {
+  const sql = document.getElementById('sqlText').value;
+  if (!sql.trim()) {
+    await alertModal('提示', '脚本内容为空');
+    return;
+  }
+  // 高危语句检测：DROP/TRUNCATE、无 WHERE 的 DELETE/UPDATE
+  const stmts = sql.split(/;(?=(?:[^'"`]*['"`][^'"`]*['"`])*[^'"`]*$)/);
+  const risky = stmts.map(s => s.trim()).filter(s =>
+    HIGH_RISK_RE.test(s) ||
+    /^\s*DELETE\s+FROM\s+\S+\s*$/i.test(s) ||
+    /^\s*UPDATE\s+\S+\s+SET.*$/is.test(s) && !/\bWHERE\b/i.test(s)
+  );
+  if (risky.length) {
+    const ok = await showModal({
+      title: '⚠️ 检测到高危语句',
+      bodyHtml: `脚本包含 <b>${risky.length}</b> 条高危语句（DROP / TRUNCATE / 无 WHERE 的 DELETE 或 UPDATE），执行后<strong>可能无法恢复</strong>：<pre>${esc(risky.slice(0, 5).join(';\n\n'))}</pre>确定继续执行？`,
+      okText: '仍然执行', cancelText: '取消', danger: true,
+    });
+    if (!ok) return;
+  }
+  const el = document.getElementById('sqlResult');
+  el.innerHTML = '<div class="result">执行中...</div>';
+  try {
+    const r = await fetch(`${API()}/api/v1/db/sql`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sql }),
+    });
+    const j = await r.json();
+    if (j.code !== 200) {
+      el.innerHTML = `<div class="result" style="color:#ff4d4f">${esc(j.message || '执行失败')}</div>`;
+      return;
+    }
+    const d = j.data;
+    const s = d.summary;
+    let html = `<div style="font-size:13px;margin-bottom:8px;">
+      <span class="status-badge ${s.failed ? 'badge-fail' : 'badge-ok'}">${esc(j.message)}</span></div>`;
+    html += '<table><tr><th>#</th><th>语句</th><th>结果</th><th>影响/返回行数</th></tr>';
+    (d.statements || []).forEach(st => {
+      const rowsInfo = st.rows_returned
+        ? `返回 ${st.rows_returned} 行`
+        : `影响 ${st.affected} 行`;
+      html += `<tr>
+        <td>${st.index}</td>
+        <td class="cell" title="${escAttr(st.sql)}">${esc(st.sql)}</td>
+        <td>${st.status === 'success'
+          ? '<span class="status-badge badge-ok">成功</span>'
+          : `<span class="status-badge badge-miss">失败</span><div style="color:#ff4d4f;font-size:11px;max-width:220px;white-space:normal">${esc(st.error || '')}</div>`}</td>
+        <td>${st.status === 'success' ? rowsInfo : '-'}</td>
+      </tr>`;
+      if (st.preview && st.preview.length) {
+        html += `<tr><td colspan="4"><div class="result" style="max-height:160px;margin:0">${esc(JSON.stringify(st.preview, null, 2))}</div></td></tr>`;
+      }
+    });
+    html += '</table>';
+    el.innerHTML = `<div class="result">${html}</div>`;
+    loadInfo();
+  } catch (e) {
+    el.innerHTML = `<div class="result" style="color:#ff4d4f">请求失败: ${esc(e.message)}</div>`;
+  }
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s) { return esc(s).replace(/'/g,'&#39;'); }
+
+// 启动时自动加载连接信息与表状态
+loadInfo();
+</script>
+</div>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>测试中心</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; display: flex; flex-direction: column; }
+header { background: #001529; color: #fff; padding: 0 20px; display: flex; align-items: center; gap: 24px; height: 48px; flex-shrink: 0; }
+header h1 { font-size: 16px; font-weight: 600; white-space: nowrap; }
+nav { display: flex; gap: 4px; height: 100%; flex: 1; overflow-x: auto; }
+nav a { display: flex; align-items: center; padding: 0 14px; color: rgba(255,255,255,0.65); text-decoration: none; font-size: 13px; white-space: nowrap; transition: all 0.2s; }
+nav a:hover { color: #fff; background: rgba(255,255,255,0.08); }
+nav a.active { color: #fff; background: #1677ff; }
+main { flex: 1; position: relative; }
+main iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; background: #f0f2f5; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧪 System B 测试中心</h1>
+  <nav id="nav"></nav>
+</header>
+
+<main><iframe id="frame" title="测试页面"></iframe></main>
+
+<script>
+// nginx 前缀代理支持：直连 5000 时 BASE 为空串，走 /web_json_html 代理时自动带上前缀
+const BASE = location.pathname.replace(/\/test_all(\.html)?$/i, '');
+
+const PAGES = [
+  { key: 'stream',  label: '流式分析',   url: BASE + '/test_analyze_stream', icon: '🔍' },
+  { key: 'meta',    label: '元数据',     url: BASE + '/test_meta',           icon: '📊' },
+  { key: 'model',   label: '配置管理',   url: BASE + '/test_model_config',   icon: '🤖' },
+  { key: 'logs',    label: '操作日志',   url: BASE + '/test_logs',           icon: '📋' },
+  { key: 'prompts', label: '提示词管理', url: BASE + '/test_prompts',        icon: '📝' },
+  { key: 'db',      label: '数据库管理', url: BASE + '/test_db',            icon: '🗄️' },
+];
+
+const nav = document.getElementById('nav');
+const frame = document.getElementById('frame');
+const DEFAULT_KEY = 'stream';
+
+function currentKey() {
+  const k = location.hash.replace(/^#/, '');
+  return PAGES.some(p => p.key === k) ? k : DEFAULT_KEY;
+}
+
+function buildNav() {
+  nav.innerHTML = PAGES.map(p =>
+    `<a href="#${p.key}" data-key="${p.key}">${p.icon} ${p.label}</a>`
+  ).join('');
+}
+
+function activate(key, push = true) {
+  const page = PAGES.find(p => p.key === key) || PAGES[0];
+  if (push && location.hash !== `#${page.key}`) location.hash = page.key;
+  nav.querySelectorAll('a').forEach(a => a.classList.toggle('active', a.dataset.key === page.key));
+  const cur = frame.dataset.key;
+  if (cur !== page.key) {
+    frame.dataset.key = page.key;
+    frame.src = page.url;
+  }
+}
+
+buildNav();
+window.addEventListener('hashchange', () => activate(currentKey(), false));
+activate(currentKey(), false);
+</script>
+</body>
+</html>

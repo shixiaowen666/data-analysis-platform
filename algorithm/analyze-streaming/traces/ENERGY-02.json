@@ -1,0 +1,37 @@
+{
+  "query_id": "ENERGY-02",
+  "query": "各场站限电率是多少？排名前三是哪些？",
+  "timestamp": "2026-03-03T07:23:56.018556",
+  "pipeline_status": "success",
+  "strict_passed": true,
+  "fail_reason": "OK",
+  "answer": "各场站的限电率如下：西北风电场G为15.0%，华北风电场B为12.0%，华北风电场A为8.5%，华东风电场C为6.2%，西北风电场H为5.2%，华东营电场D为4.5%，华南光伏站E为3.8%，华南光伏站F为2.5%。限电率排名前三的场站分别是西北风电场G（15.0%）、华北风电场B（12.0%）和华北风电场A（8.5%）。",
+  "elapsed_seconds": 14.85,
+  "execution_log": [
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_1",
+      "step_type": "query"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_2",
+      "step_type": "compute"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_3",
+      "step_type": "summarize"
+    }
+  ],
+  "data_summary": {
+    "row_count": 3,
+    "columns": [
+      "station_name",
+      "curtailment_rate"
+    ]
+  }
+}

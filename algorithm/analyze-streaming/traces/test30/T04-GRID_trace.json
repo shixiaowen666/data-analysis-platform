@@ -1,0 +1,50 @@
+{
+  "query_id": "T04-GRID",
+  "query": "近三日各省负荷率地调平均值分别是多少？",
+  "category": "multi_entity",
+  "description": "多实体聚合",
+  "timestamp": "2026-04-03T01:23:53.327840",
+  "pipeline_status": "success",
+  "validation_status": "PASS",
+  "validation_reason": "OK",
+  "new_features": {
+    "has_filter_in_decomposition": false,
+    "has_expected_table": false,
+    "compute_result_pushed": true,
+    "step_count": 3,
+    "step_types": [
+      "query",
+      "compute",
+      "summarize"
+    ]
+  },
+  "answer": "近三日各省负荷率地调平均值如下：广东省为79.27%，广西壮族自治区为72.67%，云南省为68.47%，贵州省为65.37%，海南省为59.53%。以上数据单位均为百分比（%），基于2026年2月28日至3月2日的平均值计算得出，无数据缺失情况。",
+  "elapsed_seconds": 14.01,
+  "execution_log": [
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_1",
+      "step_type": "query"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_2",
+      "step_type": "compute"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_3",
+      "step_type": "summarize"
+    }
+  ],
+  "data_summary": {
+    "row_count": 5,
+    "columns": [
+      "province",
+      "avg_load_rate_by_province"
+    ]
+  }
+}

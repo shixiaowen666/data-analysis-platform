@@ -1,0 +1,21 @@
+{
+  "query_id": "T15-HOSP",
+  "query": "2025年6月心外系统各科室直接成本结余情况如何？",
+  "category": "filter_query",
+  "description": "filter筛选(系统+时间)",
+  "timestamp": "2026-04-03T01:38:56.944554",
+  "pipeline_status": "error",
+  "validation_status": "FAIL",
+  "validation_reason": "Pipeline status=error",
+  "new_features": {
+    "has_filter_in_decomposition": false,
+    "has_expected_table": false,
+    "compute_result_pushed": false,
+    "step_count": 0,
+    "step_types": []
+  },
+  "answer": "HTTPConnectionPool(host='127.0.0.1', port=5001): Read timed out. (read timeout=300)",
+  "elapsed_seconds": 430.53,
+  "execution_log": [],
+  "data_summary": null
+}

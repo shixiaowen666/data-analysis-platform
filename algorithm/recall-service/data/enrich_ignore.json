@@ -1,0 +1,250 @@
+{
+  "items": [
+    {
+      "target": "dims",
+      "key": "ele_user_category",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "dims",
+      "key": "trade_sort_code",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "dims",
+      "key": "trade_sort_name",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "dims",
+      "key": "data_time_str",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "dims",
+      "key": "month",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "dims",
+      "key": "quarter",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "dims",
+      "key": "weekofyear",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "dims",
+      "key": "year",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "dims",
+      "key": "daymaxloadtimesupply",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "dims",
+      "key": "max_load_time",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "dims",
+      "key": "electricitytype",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "dims",
+      "key": "sort_name",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "metrics",
+      "key": "grid_power",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "metrics",
+      "key": "usercount",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "metrics",
+      "key": "max_load",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "metrics",
+      "key": "line_count",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "metrics",
+      "key": "statistic0200",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "metrics",
+      "key": "ta_num",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "metrics",
+      "key": "abnor_num_rate_temp",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "metrics",
+      "key": "line_num",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_gdl",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_yongdian_user_scale",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_electricity_auto_copy_rate_home",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_electricity_total_overview_11_industry_rank",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_dashboard_industry_expansion_stats",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_elec_supply_overview_composition_energy",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_elec_supply_overview_composition_voltage_level",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_Management_LineLoss_ManagementView_ZoneLineLossStatistics_ZoneLineLossRate",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_ComprehensiveEnergy_DistributedPVManagementView_FourKurablePieChart",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_pq_voltage_alarm_stats",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_electricity_management_overview_total_social_consumption_stats",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_line_loss_substation_fenqu",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_hydwsdb_mk_mc_user_scale",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_mk_mc_archive_scale_stat",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_mk_mc_integrity_rate",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_Data_Collection_Completeness_Rate",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_data_completeness_rate_user_plant",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_terminal_time_correction_stats",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_Copypower_usage_mgmt_power_consumption_overview_top100_enterprise_power_consumption",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_management_view_mgmt_line_loss_month",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_mll_mv_psll_mt",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_mll_mv_plll_mt_month",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_mgmt_line_loss_volt_month",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_ml_mv_hl_trend_month",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_ml_mv_hl_area_ratio_month",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_mk_mc_ml_negative_loss_area_ratio_m",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_mk_mc_ml_negative_loss_line_ratio_month",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_mgmt_line_loss_branch_io_elec",
+      "ignored_at": "2026-09-24T22:54:21"
+    },
+    {
+      "target": "tables",
+      "key": "view_power_list",
+      "ignored_at": "2026-09-24T22:54:21"
+    }
+  ],
+  "updated_at": "2026-09-24T22:54:21"
+}
