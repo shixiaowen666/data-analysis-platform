@@ -1,0 +1,58 @@
+{
+  "query_id": "T19-HOSP",
+  "query": "2025年6月心内系统工作量与服务效率如何？",
+  "category": "filter_query",
+  "description": "filter筛选(系统+时间)",
+  "timestamp": "2026-04-03T01:40:00.979952",
+  "pipeline_status": "success",
+  "validation_status": "PASS",
+  "validation_reason": "OK",
+  "new_features": {
+    "has_filter_in_decomposition": false,
+    "has_expected_table": false,
+    "compute_result_pushed": true,
+    "step_count": 4,
+    "step_types": [
+      "query",
+      "query",
+      "compute",
+      "summarize"
+    ]
+  },
+  "answer": "2025年6月，心内系统的工作量与服务效率如下：门诊人次为15800.0人次，出院人次为3200.0人次，手术台次为890.0台次。平均住院天数为7.2天，床位使用率为92.5%，病床周转次数为4.2次。在医疗费用方面，门诊次均费用为385.0元，住院次均费用为12800.0元。费用结构中，药占比为28.5%，耗占比为22.3%，医务性收入占比为49.2%。所有指标数据完整，无缺失。",
+  "elapsed_seconds": 24.11,
+  "execution_log": [
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_2",
+      "step_type": "query"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_1",
+      "step_type": "query"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_3",
+      "step_type": "compute"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_4",
+      "step_type": "summarize"
+    }
+  ],
+  "data_summary": {
+    "row_count": 121,
+    "columns": [
+      "metric_name",
+      "value",
+      "unit"
+    ]
+  }
+}

@@ -1,0 +1,343 @@
+{
+  "_comment": "业务领域知识外置配置。包含：table_enhancement(表增强信息)、dim_display_name_map(维度口语化名称)、dim_synonyms(维度别名)、topic_definitions(业务主题定义)、derived_dependency_rules(派生指标依赖规则)。修改后重启服务生效。",
+
+  "table_enhancement": {
+    "new_power_gen_rec": {
+      "display_name": "发受电量",
+      "description": "新能源/常规电源的发电量与受电量记录表，记录各地区按调度口径（统调/中调）的水电、火电、核电、风电、太阳能、生物质、抽水蓄能等各类电源发电量及发受电合计。是电源结构分析、电量平衡的核心表。",
+      "business_topics": ["发电量统计", "电源结构", "电量平衡"],
+      "typical_questions": [
+        "广东去年水电发电量是多少",
+        "今年各类型新能源发电量分别是多少",
+        "全网统调火电发电量",
+        "1月份风电发电量",
+        "今天总发电量"
+      ]
+    },
+    "new_energy_daily_status": {
+      "display_name": "新能源运行情况",
+      "description": "新能源电站日运行情况表，记录各电站每日的最大出力、平均出力、装机容量、利用小时数、控制电量、可发未发电量等关键运行指标。",
+      "business_topics": ["新能源运行", "电站运行指标"],
+      "typical_questions": [
+        "广东-阳江海上风电场最大出力",
+        "新能源平均出力",
+        "电站装机容量",
+        "可发未发电量",
+        "新能源利用率"
+      ]
+    },
+    "new_realTime_measurement": {
+      "display_name": "实时量测",
+      "description": "电厂/电站设备实时遥测数据表，记录有功功率、无功功率、电压、电流、频率等电气量的实时测量值。",
+      "business_topics": ["实时量测", "电气运行参数"],
+      "typical_questions": [
+        "白鹤滩电厂电压",
+        "电厂实时出力",
+        "电厂频率",
+        "无功功率",
+        "测点数据"
+      ]
+    },
+    "new_energy_info_fill": {
+      "display_name": "新能源信息填报",
+      "description": "新能源装机/发电填报表，按地区、发电类型聚合的发电量、装机容量、计划/实际发受电量等。",
+      "business_topics": ["新能源装机", "发电填报"],
+      "typical_questions": [
+        "广东风电装机容量",
+        "新能源发电量",
+        "实际发电量",
+        "计划电量",
+        "最大持续出力"
+      ]
+    },
+    "power_transfer_receive": {
+      "display_name": "送受电量",
+      "description": "省间/区域间送受电量表，记录送出方-受入方的电量、电力、计划与实际值等。",
+      "business_topics": ["送受电", "省间联络"],
+      "typical_questions": [
+        "广西受海南电量",
+        "广东送贵州",
+        "省间送受电",
+        "实际送电量",
+        "计划受电量"
+      ]
+    },
+    "load_and_reserve": {
+      "display_name": "负荷与备用",
+      "description": "电网负荷与备用容量表，按地调/统调/中调三种调度口径分别记录最高/最低负荷、平均负荷、负荷率、峰谷差、备用容量等。",
+      "business_topics": ["负荷指标", "备用容量", "调度口径"],
+      "typical_questions": [
+        "广东最高负荷",
+        "地调负荷率",
+        "峰谷差",
+        "统调最高负荷时间",
+        "中调备用容量"
+      ]
+    },
+    "power_grid_section": {
+      "display_name": "断面表",
+      "description": "电网关键断面（如高肇直流、滇黔联络线、广东-澳门联络线等）的功率/负载率/越限状态实时记录。",
+      "business_topics": ["断面监视", "联络线", "越限告警"],
+      "typical_questions": [
+        "高肇直流断面功率",
+        "断面越限",
+        "联络线负载率",
+        "断面控制值",
+        "断面正向/反向极限"
+      ]
+    },
+    "trip_info": {
+      "display_name": "跳闸情况",
+      "description": "电网跳闸/停电故障记录表，记录线路名称、电压等级、停电类型（跳闸/重合成功/主动停运）、故障类型、停电时间、复电时间、故障所属维护单位等。",
+      "business_topics": ["跳闸故障", "停电统计"],
+      "typical_questions": [
+        "今天跳闸次数",
+        "跳闸重合成功",
+        "线路停电时长",
+        "故障原因",
+        "佛山地调跳闸"
+      ]
+    }
+  },
+
+  "dim_display_name_map": {
+    "ptdate": "日期",
+    "month": "月份",
+    "quarter": "季度",
+    "weekofyear": "自然周",
+    "year": "年度",
+    "object_id": "对象编号",
+    "id": "自增主键",
+    "name": "名称",
+    "control_reason": "新能源控制原因",
+    "point_name": "测点名",
+    "region_name": "地区",
+    "point_id": "测点ID",
+    "gen_type": "发电类型",
+    "power_flow_direction": "送受电方向",
+    "record_no": "记录号",
+    "dispatch_org": "调管机构",
+    "city_belong": "市级区域",
+    "substation": "变电站",
+    "power_outage_type": "停电类型",
+    "fault_maintain_unit": "故障所属维护单位",
+    "line_code": "线路编码",
+    "line_name": "线路名称",
+    "fault_phase": "故障相别",
+    "fault_type": "故障类型",
+    "recloser_action": "重合闸动作情况",
+    "county_district": "所属县区",
+    "outage_reason": "停电原因",
+    "power_delivery_status": "送电情况",
+    "power_restore_status": "用电恢复情况",
+    "recorder": "记录人",
+    "record_time": "记录时间",
+    "object_timestamp": "对象时标",
+    "section_name": "断面名",
+    "limit_status": "越限状态",
+    "busbar": "所属母线",
+    "min_time_local": "最低时间_地调",
+    "max_time_local": "最高时间_地调",
+    "min_time_unified": "最低时间_统调",
+    "max_time_unified": "最高时间_统调",
+    "min_time_central": "最低时间_中调",
+    "max_time_central": "最高时间_中调",
+    "voltage_level": "电压等级",
+    "outage_time": "停电时间",
+    "restore_time": "复电时间"
+  },
+
+  "dim_synonyms": {
+    "region_name": ["地区名", "省份", "省", "区域"],
+    "name": ["电站名", "电站名称", "风电场", "光伏电站", "新能源电站"],
+    "point_name": ["测点", "电厂测点", "遥测点"],
+    "gen_type": ["电源类型", "发电类别", "新能源类型"],
+    "power_flow_direction": ["送受电关系", "省间联络方向", "送电方向", "受电方向"],
+    "dispatch_org": ["调度机构", "省调", "地调", "中调", "调度单位"],
+    "section_name": ["断面", "联络线", "电网断面"],
+    "power_outage_type": ["停电类别", "故障类型", "跳闸类型"],
+    "fault_maintain_unit": ["维护单位", "维护班组", "供电局"],
+    "line_name": ["线路", "输电线路"],
+    "ptdate": ["日期", "时间", "天"],
+    "city_belong": ["所属地市", "城市"],
+    "voltage_level": ["电压等级", "kV"]
+  },
+
+  "topic_definitions": [
+    {
+      "topic_name": "发电量统计",
+      "description": "电源发电量、受电量、发受电合计、上网电量等电量类指标的查询，覆盖统调/中调口径下水电、火电、核电、风电、太阳能、生物质、蓄能等各类电源",
+      "tables": ["new_power_gen_rec", "new_energy_info_fill"],
+      "typical_queries": [
+        "广东水电发电量是多少",
+        "今年各类型新能源发电量",
+        "统调火电上网电量",
+        "1月份风电发电量",
+        "总发电量",
+        "全网新能源发电量"
+      ],
+      "metric_keywords": ["发电", "受电", "发受电", "电量", "上网"]
+    },
+    {
+      "topic_name": "负荷与备用",
+      "description": "电网负荷类指标查询，包括最高负荷、最低负荷、平均负荷、负荷率、峰谷差、备用容量等，按地调/统调/中调三种口径区分",
+      "tables": ["load_and_reserve"],
+      "typical_queries": [
+        "广东最高负荷",
+        "今天地调负荷率",
+        "峰谷差",
+        "统调最高负荷时间",
+        "中调备用容量"
+      ],
+      "metric_keywords": ["负荷", "备用", "峰谷", "出力", "最高时间", "最低时间"]
+    },
+    {
+      "topic_name": "新能源运行",
+      "description": "新能源电站（风电、光伏、生物质等）的运行情况查询，包括最大出力、平均出力、利用小时、控制电量、可发未发电量、装机等",
+      "tables": ["new_energy_daily_status", "new_energy_info_fill"],
+      "typical_queries": [
+        "广东-阳江海上风电场最大出力",
+        "新能源平均出力",
+        "电站装机容量",
+        "可发未发电量",
+        "新能源利用率",
+        "最大持续出力"
+      ],
+      "metric_keywords": ["出力", "装机", "利用小时", "控制电量", "可发未发", "新能源"]
+    },
+    {
+      "topic_name": "送受电",
+      "description": "省间或区域间送受电量查询，包括送电方向、计划/实际送受电量",
+      "tables": ["power_transfer_receive"],
+      "typical_queries": [
+        "广西受海南电量",
+        "广东送贵州",
+        "省间送受电",
+        "实际送电量",
+        "计划受电量"
+      ],
+      "metric_keywords": ["送电", "受电", "送受电", "送出", "受入"]
+    },
+    {
+      "topic_name": "实时量测",
+      "description": "电厂、电站设备的实时遥测数据查询，包括电压、电流、频率、功率等",
+      "tables": ["new_realTime_measurement"],
+      "typical_queries": [
+        "白鹤滩电厂电压",
+        "电厂实时出力",
+        "电厂频率",
+        "无功功率",
+        "测点数据值"
+      ],
+      "metric_keywords": ["电压", "电流", "频率", "功率", "数据值"]
+    },
+    {
+      "topic_name": "断面监视",
+      "description": "电网关键断面（直流、联络线）的功率、负载率、越限状态查询",
+      "tables": ["power_grid_section"],
+      "typical_queries": [
+        "高肇直流断面功率",
+        "断面越限",
+        "联络线负载率",
+        "断面控制值",
+        "断面极限值"
+      ],
+      "metric_keywords": ["断面", "极限", "控制值", "负载率"]
+    },
+    {
+      "topic_name": "跳闸故障",
+      "description": "电网跳闸、停电故障相关的统计与查询，包括跳闸次数、跳闸重合成功次数、停电时长、故障原因、维护单位等",
+      "tables": ["trip_info"],
+      "typical_queries": [
+        "今天跳闸次数是多少",
+        "跳闸重合成功",
+        "线路停电时长",
+        "故障原因",
+        "佛山地调跳闸",
+        "停电次数"
+      ],
+      "metric_keywords": ["跳闸", "停电", "故障"]
+    }
+  ],
+
+  "derived_dependency_rules": [
+    {
+      "keyword": "跳闸",
+      "deps": [
+        { "entity_type": "table", "ref_key": "trip_info" },
+        { "entity_type": "dimension_code", "ref_key": "power_outage_type" },
+        { "entity_type": "dim_value", "ref_key": ["power_outage_type", "跳闸"] },
+        { "entity_type": "metric_code", "ref_key": "outage_time" }
+      ]
+    },
+    {
+      "keyword": "跳闸重合成功",
+      "deps": [
+        { "entity_type": "table", "ref_key": "trip_info" },
+        { "entity_type": "dimension_code", "ref_key": "power_outage_type" },
+        { "entity_type": "dim_value", "ref_key": ["power_outage_type", "跳闸重合成功"] },
+        { "entity_type": "metric_code", "ref_key": "outage_time" }
+      ]
+    },
+    {
+      "keyword": "停电次数",
+      "deps": [
+        { "entity_type": "table", "ref_key": "trip_info" },
+        { "entity_type": "dimension_code", "ref_key": "power_outage_type" },
+        { "entity_type": "dimension_code", "ref_key": "fault_maintain_unit" },
+        { "entity_type": "dim_value", "ref_key": ["power_outage_type", "跳闸"] },
+        { "entity_type": "dim_value", "ref_key": ["power_outage_type", "主动停运"] }
+      ]
+    },
+    {
+      "keyword": "停电时长",
+      "deps": [
+        { "entity_type": "table", "ref_key": "trip_info" },
+        { "entity_type": "metric_code", "ref_key": "outage_time" },
+        { "entity_type": "metric_code", "ref_key": "restore_time" }
+      ]
+    },
+    {
+      "keyword": "新能源发电量",
+      "deps": [
+        { "entity_type": "table", "ref_key": "new_energy_info_fill" },
+        { "entity_type": "table", "ref_key": "new_power_gen_rec" },
+        { "entity_type": "dimension_code", "ref_key": "gen_type" },
+        { "entity_type": "dim_value", "ref_key": ["gen_type", "风能"] },
+        { "entity_type": "dim_value", "ref_key": ["gen_type", "集中式光伏"] },
+        { "entity_type": "dim_value", "ref_key": ["gen_type", "统调光伏"] },
+        { "entity_type": "dim_value", "ref_key": ["gen_type", "总分布式光伏"] },
+        { "entity_type": "dim_value", "ref_key": ["gen_type", "总光伏"] },
+        { "entity_type": "dim_value", "ref_key": ["gen_type", "生物质"] }
+      ]
+    },
+    {
+      "keyword": "电站",
+      "deps": [
+        { "entity_type": "dimension_code", "ref_key": "name" }
+      ]
+    },
+    {
+      "keyword": "南方五省",
+      "deps": [
+        { "entity_type": "dimension_code", "ref_key": "region_name" },
+        { "entity_type": "dim_value", "ref_key": ["region_name", "广东"] },
+        { "entity_type": "dim_value", "ref_key": ["region_name", "广西"] },
+        { "entity_type": "dim_value", "ref_key": ["region_name", "云南"] },
+        { "entity_type": "dim_value", "ref_key": ["region_name", "贵州"] },
+        { "entity_type": "dim_value", "ref_key": ["region_name", "海南"] }
+      ]
+    },
+    {
+      "keyword": "全网",
+      "deps": [
+        { "entity_type": "dimension_code", "ref_key": "region_name" },
+        { "entity_type": "dim_value", "ref_key": ["region_name", "广东"] },
+        { "entity_type": "dim_value", "ref_key": ["region_name", "广西"] },
+        { "entity_type": "dim_value", "ref_key": ["region_name", "云南"] },
+        { "entity_type": "dim_value", "ref_key": ["region_name", "贵州"] },
+        { "entity_type": "dim_value", "ref_key": ["region_name", "海南"] }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "query_id": "T02-GRID",
+  "query": "2024年西电东送电量多少？同比2023年增长多少？",
+  "category": "yoy_compute",
+  "description": "同比计算",
+  "timestamp": "2026-04-03T01:23:28.322712",
+  "pipeline_status": "success",
+  "validation_status": "PASS",
+  "validation_reason": "OK",
+  "new_features": {
+    "has_filter_in_decomposition": false,
+    "has_expected_table": false,
+    "compute_result_pushed": true,
+    "step_count": 3,
+    "step_types": [
+      "query",
+      "compute",
+      "summarize"
+    ]
+  },
+  "answer": "2024年西电东送电量为2456.0亿千瓦时，相比2023年的2305.0亿千瓦时，同比增长6.55%，增量为151.0亿千瓦时。",
+  "elapsed_seconds": 11.63,
+  "execution_log": [
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_1",
+      "step_type": "query"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_2",
+      "step_type": "compute"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_3",
+      "step_type": "summarize"
+    }
+  ],
+  "data_summary": {
+    "row_count": 2,
+    "columns": [
+      "year",
+      "transmission_energy",
+      "yoy_growth_rate",
+      "yoy_change_amount"
+    ]
+  }
+}

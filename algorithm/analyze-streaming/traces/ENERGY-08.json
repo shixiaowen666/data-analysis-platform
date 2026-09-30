@@ -1,0 +1,43 @@
+{
+  "query_id": "ENERGY-08",
+  "query": "哪些场站年度可利用小时数低于公司均值？原因是什么？",
+  "timestamp": "2026-03-03T07:26:58.949243",
+  "pipeline_status": "success",
+  "strict_passed": true,
+  "fail_reason": "OK",
+  "answer": "根据数据分析结果，年度可利用小时数低于公司均值的场站包括：华北风电场B（1850.0 h）、华南光伏站E（1680.0 h）、华南光伏站F（1520.0 h）和西北风电场H（1780.0 h）。其中，华北风电场B的主要原因为高限电率，在2025年6月达到12.0%，显著压缩了设备运行时间；华南光伏站E受冬季低辐照（380–420 W/m²）影响，且可能存在限电现象，但缺乏具体的限电率和故障数据支持进一步分析；华南光伏站F可利用小时数最低，比华南光伏站E低160 h，推测存在高频故障或长期维护停机，但当前无故障次数（fault_count）和维护停机时间（maintenance_downtime）数据，无法确认具体原因；西北风电场H虽处于风速较高区域（冬春季平均风速达6.3–7.5 m/s），但可利用小时仍偏低，疑似存在系统性限电或集中检修，相关限电与故障数据缺失，制约精准归因。综上，部分场站原因分析受限于数据完整性，建议补充限电率、故障次数及维护停机时长等关键指标以提升诊断准确性。",
+  "elapsed_seconds": 92.12,
+  "execution_log": [
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_1",
+      "step_type": "query"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_2",
+      "step_type": "compute"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_3",
+      "step_type": "analyze"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_4",
+      "step_type": "summarize"
+    }
+  ],
+  "data_summary": {
+    "row_count": 4,
+    "columns": [
+      "station_name",
+      "available_hours"
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "query_id": "ENERGY-01",
+  "query": "各场站年度可利用小时数是多少？哪些高于公司均值？",
+  "timestamp": "2026-03-03T07:23:41.170933",
+  "pipeline_status": "success",
+  "strict_passed": true,
+  "fail_reason": "OK",
+  "answer": "各场站年度可利用小时数如下：华北风电场A为2150.0小时，华北风电场B为1850.0小时，华东风电场C为2380.0小时，华东风电场D为1920.0小时，华南光伏站E为1680.0小时，华南光伏站F为1520.0小时，西北风电场G为2050.0小时，西北风电场H为1780.0小时。公司所有场站的平均可利用小时数为1968.75小时。高于公司均值的场站有：华北风电场A（2150.0小时）、华东风电场C（2380.0小时）、华东风电场D（1920.0小时）和西北风电场G（2050.0小时）。",
+  "elapsed_seconds": 19.33,
+  "execution_log": [
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_1",
+      "step_type": "query"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_2",
+      "step_type": "compute"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_3",
+      "step_type": "summarize"
+    }
+  ],
+  "data_summary": {
+    "row_count": 4,
+    "columns": [
+      "station_name",
+      "available_hours"
+    ]
+  }
+}

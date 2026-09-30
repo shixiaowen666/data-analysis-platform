@@ -1,0 +1,21 @@
+{
+  "query_id": "T14-HOSP",
+  "query": "各科室药占比排名前三是哪些？",
+  "category": "ranking",
+  "description": "TopN排名",
+  "timestamp": "2026-04-03T01:31:46.416381",
+  "pipeline_status": "error",
+  "validation_status": "FAIL",
+  "validation_reason": "Pipeline status=error",
+  "new_features": {
+    "has_filter_in_decomposition": false,
+    "has_expected_table": false,
+    "compute_result_pushed": false,
+    "step_count": 0,
+    "step_types": []
+  },
+  "answer": "HTTPConnectionPool(host='127.0.0.1', port=5001): Read timed out. (read timeout=300)",
+  "elapsed_seconds": 346.29,
+  "execution_log": [],
+  "data_summary": null
+}

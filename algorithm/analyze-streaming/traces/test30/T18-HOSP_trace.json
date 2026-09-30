@@ -1,0 +1,47 @@
+{
+  "query_id": "T18-HOSP",
+  "query": "综内2025年1-2月各科室住院次均费用明细如何？",
+  "category": "filter_query",
+  "description": "filter筛选(系统+时间范围)",
+  "timestamp": "2026-04-03T01:39:36.872620",
+  "pipeline_status": "success",
+  "validation_status": "PASS",
+  "validation_reason": "OK",
+  "new_features": {
+    "has_filter_in_decomposition": false,
+    "has_expected_table": false,
+    "compute_result_pushed": false,
+    "step_count": 2,
+    "step_types": [
+      "query",
+      "summarize"
+    ]
+  },
+  "answer": "2025年1月至2月，各科室住院次均费用明细如下：\n\n呼吸科：  \n- 1月住院次均费用为12500.0元，其中药品费3200.0元，材料费1800.0元，医疗收入4500.0元；  \n- 2月住院次均费用为12800.0元，其中药品费3350.0元，材料费1850.0元，医疗收入4600.0元。\n\n神经内科：  \n- 1月住院次均费用为15200.0元，其中药品费4100.0元，材料费2200.0元，医疗收入5800.0元；  \n- 2月住院次均费用为15500.0元，其中药品费4250.0元，材料费2150.0元，医疗收入5950.0元。\n\n消化内科：  \n- 1月住院次均费用为11800.0元，其中药品费2900.0元，材料费1500.0元，医疗收入4200.0元；  \n- 2月住院次均费用为12100.0元，其中药品费3050.0元，材料费1550.0元，医疗收入4350.0元。\n\n以上数据完整覆盖所查询时间段及指标，无缺失信息。",
+  "elapsed_seconds": 15.62,
+  "execution_log": [
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_1",
+      "step_type": "query"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_2",
+      "step_type": "summarize"
+    }
+  ],
+  "data_summary": {
+    "row_count": 6,
+    "columns": [
+      "department",
+      "month",
+      "avg_inpatient_cost",
+      "avg_drug_fee",
+      "avg_material_fee",
+      "avg_medical_income"
+    ]
+  }
+}

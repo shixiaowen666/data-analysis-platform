@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>操作日志测试</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; color: #333; display: flex; justify-content: center; }
+.container { max-width: 900px; width: 100%; }
+h1 { margin-bottom: 20px; font-size: 22px; }
+.nav-link { font-size: 13px; color: #1677ff; text-decoration: none; margin-bottom: 16px; display: inline-block; }
+.card { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 16px; }
+.card h2 { font-size: 16px; margin-bottom: 12px; color: #1a1a1a; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+.form-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; align-items: flex-end; }
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group label { font-size: 12px; color: #666; }
+.form-group input, .form-group select { padding: 6px 10px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; outline: none; }
+.form-group input:focus, .form-group select:focus { border-color: #1677ff; }
+.btn { padding: 7px 16px; border: none; border-radius: 4px; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+.btn-primary { background: #1677ff; color: #fff; }
+.btn-primary:hover { background: #4096ff; }
+.btn-default { background: #fff; color: #333; border: 1px solid #d9d9d9; }
+.btn-default:hover { border-color: #1677ff; color: #1677ff; }
+.btn-danger { background: #ff4d4f; color: #fff; }
+.btn-danger:hover { background: #ff7875; }
+.result { background: #fafafa; border: 1px solid #e8e8e8; border-radius: 4px; padding: 12px; font-size: 12px; font-family: 'Consolas', 'Menlo', monospace; white-space: pre-wrap; max-height: 400px; overflow-y: auto; margin-top: 10px; }
+.status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+.status-200 { background: #f6ffed; color: #52c41a; }
+.status-400 { background: #fff7e6; color: #fa8c16; }
+.status-500 { background: #fff2f0; color: #ff4d4f; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+th { background: #fafafa; font-weight: 500; color: #666; }
+.pagination { display: flex; gap: 8px; align-items: center; margin-top: 12px; font-size: 13px; }
+.pagination span { color: #666; }
+#baseUrl { width: 320px; }
+.modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+.modal { background: #fff; border-radius: 8px; width: 720px; max-width: 92vw; max-height: 82vh; display: flex; flex-direction: column; box-shadow: 0 6px 24px rgba(0,0,0,0.18); }
+.modal-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid #eee; }
+.modal-head h3 { font-size: 15px; font-weight: 600; }
+.modal-close { border: none; background: none; font-size: 18px; cursor: pointer; color: #999; padding: 2px 6px; }
+.modal-close:hover { color: #333; }
+.modal-body { padding: 14px 18px; overflow-y: auto; }
+.modal-body pre { background: #fafafa; border: 1px solid #e8e8e8; border-radius: 4px; padding: 12px; font-size: 12px; font-family: 'Consolas', 'Menlo', monospace; white-space: pre-wrap; word-break: break-all; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>📋 用户操作日志 - 功能测试</h1>
+<a class="nav-link" href="/test_all">← 返回测试中心</a>
+
+<!-- 服务配置 -->
+<div class="card">
+  <h2>服务配置</h2>
+  <div class="form-row">
+    <div class="form-group">
+      <label>System B 地址（日志 API）</label>
+      <input id="baseUrl" value="http://127.0.0.1:5000">
+    </div>
+    <div class="form-group" style="align-self: flex-end;">
+      <button class="btn btn-primary" onclick="checkHealth()">B 健康检查</button>
+    </div>
+    <span id="healthStatus" style="align-self: center; font-size: 13px;"></span>
+  </div>
+  <div style="font-size:12px;color:#999;margin-top:8px;">提示：写入操作日志请使用「流式分析」页面发起分析，分析完成后自动写入日志。</div>
+</div>
+
+<!-- 1. 查询已有日志用户 -->
+<div class="card">
+  <h2>1. 获取已有日志的用户（/api/v1/logs/users）</h2>
+  <div class="form-row">
+    <button class="btn btn-primary" onclick="getUsers()">刷新用户列表</button>
+    <span style="font-size:12px;color:#999;align-self:center;">页面加载时自动查询，结果同步填充到下方用户下拉框</span>
+  </div>
+  <div id="usersResult" style="margin-top:10px;"></div>
+</div>
+
+<!-- 2. 查询日志列表 -->
+<div class="card">
+  <h2>2. 查询日志列表（/api/v1/logs/list）</h2>
+  <div class="form-row">
+    <div class="form-group">
+      <label>用户 ID</label>
+      <select id="filterUser" style="width:180px"><option value="">全部用户</option></select>
+    </div>
+    <div class="form-group">
+      <label>起始日期</label>
+      <input id="filterDateStart" type="date" style="width:140px">
+    </div>
+    <div class="form-group">
+      <label>结束日期</label>
+      <input id="filterDateEnd" type="date" style="width:140px">
+    </div>
+    <div class="form-group">
+      <label>每页条数</label>
+      <input id="filterPageSize" value="20" style="width:60px" type="number" min="1" max="100">
+    </div>
+    <div class="form-group" style="align-self: flex-end;">
+      <button class="btn btn-primary" onclick="getLogList(1)">查询</button>
+    </div>
+  </div>
+  <div id="listResult" style="margin-top:10px;"></div>
+</div>
+
+<!-- 3. 下载日志 -->
+<div class="card">
+  <h2>3. 下载日志文件（/api/v1/logs/download）</h2>
+  <div class="form-row">
+    <div class="form-group">
+      <label>用户 ID</label>
+      <select id="dlUser" style="width:180px"><option value="">请先查询用户列表</option></select>
+    </div>
+    <div class="form-group">
+      <label>日志日期</label>
+      <input id="dlDate" type="date" style="width:140px">
+    </div>
+    <div class="form-group" style="align-self: flex-end;">
+      <button class="btn btn-primary" onclick="downloadLog()">下载文件</button>
+    </div>
+  </div>
+  <div id="dlStatus" style="font-size:13px;"></div>
+</div>
+
+<script>
+// nginx 前缀代理支持：直连 5000 时 BASE 为空串，走 /web_json_html 代理时自动带上前缀
+const BASE = location.pathname.replace(/\/test_[a-z_]+(\.html)?$/i, '');
+document.querySelectorAll('a.nav-link[href="/test_all"]').forEach(a => {
+  // 嵌在测试中心 iframe 里时隐藏返回链接，避免 iframe 内再嵌一层测试中心导致顶部重复
+  if (window.self !== window.top) { a.remove(); } else { a.href = BASE + '/test_all'; }
+});
+document.getElementById('baseUrl').value = location.origin;
+
+const API = () => document.getElementById('baseUrl').value.trim() + BASE;
+
+// 测试页鉴权：本地签发测试 JWT，自动注入所有请求
+const JWT_SECRET = 'chatbi-jwt-secret-key-for-production-2026';
+
+function b64url(bytes) {
+  let s = '';
+  new Uint8Array(bytes).forEach(b => s += String.fromCharCode(b));
+  return btoa(s).replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_');
+}
+
+// 纯 JS 版 HMAC-SHA256：非安全上下文（HTTP+IP 访问）下 crypto.subtle 为 undefined，用它兜底
+function sha256Bytes(bytes) {
+  const K = [
+    0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+  ];
+  const H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const len = bytes.length;
+  const padded = new Uint8Array((((len + 8) >> 6) + 1) * 64);
+  padded.set(bytes);
+  padded[len] = 0x80;
+  const dv = new DataView(padded.buffer);
+  const bitLen = len * 8;
+  dv.setUint32(padded.length - 8, Math.floor(bitLen / 4294967296));
+  dv.setUint32(padded.length - 4, bitLen >>> 0);
+  const w = new Int32Array(64);
+  const rr = (x, n) => (x >>> n) | (x << (32 - n));
+  for (let off = 0; off < padded.length; off += 64) {
+    for (let i = 0; i < 16; i++) w[i] = dv.getUint32(off + i * 4);
+    for (let i = 16; i < 64; i++) {
+      const s0 = rr(w[i-15], 7) ^ rr(w[i-15], 18) ^ (w[i-15] >>> 3);
+      const s1 = rr(w[i-2], 17) ^ rr(w[i-2], 19) ^ (w[i-2] >>> 10);
+      w[i] = (w[i-16] + s0 + w[i-7] + s1) | 0;
+    }
+    let a=H[0],b=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7];
+    for (let i = 0; i < 64; i++) {
+      const S1 = rr(e, 6) ^ rr(e, 11) ^ rr(e, 25);
+      const ch = (e & f) ^ (~e & g);
+      const t1 = (h + S1 + ch + K[i] + w[i]) | 0;
+      const S0 = rr(a, 2) ^ rr(a, 13) ^ rr(a, 22);
+      const maj = (a & b) ^ (a & c) ^ (b & c);
+      const t2 = (S0 + maj) | 0;
+      h=g; g=f; f=e; e=(d + t1)|0; d=c; c=b; b=a; a=(t1 + t2)|0;
+    }
+    H[0]=(H[0]+a)|0; H[1]=(H[1]+b)|0; H[2]=(H[2]+c)|0; H[3]=(H[3]+d)|0;
+    H[4]=(H[4]+e)|0; H[5]=(H[5]+f)|0; H[6]=(H[6]+g)|0; H[7]=(H[7]+h)|0;
+  }
+  const out = new Uint8Array(32);
+  const odv = new DataView(out.buffer);
+  for (let i = 0; i < 8; i++) odv.setUint32(i * 4, H[i] >>> 0);
+  return out;
+}
+
+function hmacSha256(keyBytes, msgBytes) {
+  const block = new Uint8Array(64);
+  block.set(keyBytes.length > 64 ? sha256Bytes(keyBytes) : keyBytes);
+  const inner = new Uint8Array(64 + msgBytes.length);
+  for (let i = 0; i < 64; i++) inner[i] = block[i] ^ 0x36;
+  inner.set(msgBytes, 64);
+  const outer = new Uint8Array(96);
+  for (let i = 0; i < 64; i++) outer[i] = block[i] ^ 0x5c;
+  outer.set(sha256Bytes(inner), 64);
+  return sha256Bytes(outer);
+}
+
+async function makeToken() {
+  const header = b64url(new TextEncoder().encode(JSON.stringify({alg:'HS256', typ:'JWT'})));
+  const payload = b64url(new TextEncoder().encode(JSON.stringify({
+    user_id: 'page-test', sub: 'page-test', exp: Math.floor(Date.now()/1000) + 3600,
+  })));
+  const keyBytes = new TextEncoder().encode(JWT_SECRET);
+  const data = new TextEncoder().encode(header + '.' + payload);
+  let sig;
+  if (window.crypto && crypto.subtle && crypto.subtle.importKey) {
+    const key = await crypto.subtle.importKey('raw', keyBytes, {name:'HMAC', hash:'SHA-256'}, false, ['sign']);
+    sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, data));
+  } else {
+    sig = hmacSha256(keyBytes, data);
+  }
+  return `${header}.${payload}.${b64url(sig)}`;
+}
+
+const _origFetch = window.fetch;
+window.fetch = async function (input, init) {
+  const token = await makeToken();
+  init = init ? { ...init } : {};
+  const headers = new Headers(init.headers || (input instanceof Request ? input.headers : {}));
+  headers.set('Authorization', `Bearer ${token}`);
+  init.headers = headers;
+  return _origFetch.call(this, input, init);
+};
+
+// 健康检查
+async function checkHealth() {
+  const el = document.getElementById('healthStatus');
+  try {
+    const r = await fetch(`${API()}/health`);
+    const j = await r.json();
+    el.innerHTML = `<span class="status-badge status-200">OK</span> ${esc(j.status)}`;
+  } catch (e) {
+    el.innerHTML = `<span class="status-badge status-500">DOWN</span> ${esc(e.message)}`;
+  }
+}
+
+// 1. 获取已有日志的用户，结果填充表格与所有用户下拉框
+async function getUsers() {
+  const el = document.getElementById('usersResult');
+  el.innerHTML = '<span style="color:#999">查询中...</span>';
+  try {
+    const r = await fetch(`${API()}/api/v1/logs/users`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    const j = await r.json();
+    if (j.code !== 200) {
+      el.innerHTML = `<span style="color:#ff4d4f">错误: ${esc(j.message || ('HTTP ' + r.status))}</span>`;
+      return;
+    }
+    const list = (j.data && j.data.list) || [];
+    if (!list.length) {
+      el.innerHTML = '<span style="color:#999">暂无用户日志数据</span>';
+      return;
+    }
+    let html = `<div style="font-size:13px;margin-bottom:8px;">共 <b>${list.length}</b> 个用户</div>`;
+    html += '<table><tr><th>用户 ID</th><th>用户名</th></tr>';
+    list.forEach(u => {
+      html += `<tr><td>${esc(u.user_id)}</td><td>${esc(u.username)}</td></tr>`;
+    });
+    html += '</table>';
+    el.innerHTML = html;
+    fillUserSelects(list);
+  } catch (e) {
+    el.innerHTML = `<span style="color:#ff4d4f">请求失败: ${esc(e.message)}</span>`;
+  }
+}
+
+function fillUserSelects(list) {
+  const keep = id => document.getElementById(id).value;
+  const selUser = keep('filterUser'), selDl = keep('dlUser');
+  const build = (id, allLabel) => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = `<option value="">${allLabel}</option>` +
+      list.map(u => `<option value="${esc(u.user_id)}">${esc(u.user_id)}（${esc(u.username)}）</option>`).join('');
+  };
+  build('filterUser', '全部用户');
+  build('dlUser', '请选择用户');
+  document.getElementById('filterUser').value = selUser;
+  document.getElementById('dlUser').value = selDl;
+}
+
+// 2. 查询日志列表（美化展示，含查看/下载操作）
+async function getLogList(page) {
+  const el = document.getElementById('listResult');
+  el.innerHTML = '<span style="color:#999">查询中...</span>';
+  const body = {
+    user_id: document.getElementById('filterUser').value,
+    log_date_start: document.getElementById('filterDateStart').value,
+    log_date_end: document.getElementById('filterDateEnd').value,
+    page: page,
+    page_size: parseInt(document.getElementById('filterPageSize').value) || 20,
+  };
+  try {
+    const r = await fetch(`${API()}/api/v1/logs/list`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const j = await r.json();
+    if (j.code !== 200) {
+      el.innerHTML = `<span style="color:#ff4d4f">错误: ${esc(j.message || ('HTTP ' + r.status))}</span>`;
+      return;
+    }
+    const d = j.data;
+    const rows = d.list || [];
+    let html = `<div style="font-size:13px;margin-bottom:8px;">共 <b>${d.total}</b> 条，第 <b>${d.page}</b> 页</div>`;
+    if (rows.length > 0) {
+      html += '<table><tr><th>ID</th><th>用户ID</th><th>用户名</th><th>日期</th><th>路径</th><th>更新时间</th><th>操作</th></tr>';
+      rows.forEach(row => {
+        html += `<tr>
+          <td>${row.id}</td>
+          <td>${esc(row.user_id)}</td>
+          <td>${esc(row.username)}</td>
+          <td>${esc(row.log_date)}</td>
+          <td style="font-size:11px">${esc(row.log_path)}</td>
+          <td>${esc(row.updated_at)}</td>
+          <td>
+            <button class="btn btn-default" style="padding:2px 8px;font-size:11px;" onclick="viewLog('${escAttr(row.log_path)}')">查看</button>
+            <button class="btn btn-default" style="padding:2px 8px;font-size:11px;" onclick="downloadLogDirect('${esc(row.user_id)}','${row.log_date}')">下载</button>
+          </td>
+        </tr>`;
+      });
+      html += '</table>';
+      const totalPages = Math.max(1, Math.ceil(d.total / d.page_size));
+      html += '<div class="pagination">';
+      html += `<button class="btn btn-default" ${page<=1?'disabled':''} onclick="getLogList(${page-1})">上一页</button>`;
+      html += `<span>${page} / ${totalPages}</span>`;
+      html += `<button class="btn btn-default" ${page>=totalPages?'disabled':''} onclick="getLogList(${page+1})">下一页</button>`;
+      html += '</div>';
+    } else {
+      html += '<span style="color:#999">暂无匹配记录</span>';
+    }
+    el.innerHTML = html;
+  } catch (e) {
+    el.innerHTML = `<span style="color:#ff4d4f">请求失败: ${esc(e.message)}</span>`;
+  }
+}
+
+// 查看日志内容（模态窗口，/api/v1/logs/preview）
+async function viewLog(logPath) {
+  const old = document.getElementById('logViewModal');
+  if (old) old.remove();
+  const mask = document.createElement('div');
+  mask.id = 'logViewModal';
+  mask.className = 'modal-mask';
+  mask.innerHTML = `<div class="modal">
+    <div class="modal-head">
+      <h3>日志内容</h3>
+      <button class="modal-close" onclick="document.getElementById('logViewModal').remove()">✕</button>
+    </div>
+    <div class="modal-body"><span style="color:#999">加载中...</span></div>
+  </div>`;
+  mask.addEventListener('click', e => { if (e.target === mask) mask.remove(); });
+  document.body.appendChild(mask);
+  const body = mask.querySelector('.modal-body');
+  try {
+    const r = await fetch(`${API()}/api/v1/logs/preview`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ log_path: logPath }),
+    });
+    const j = await r.json();
+    if (j.code !== 200) {
+      body.innerHTML = `<span style="color:#ff4d4f">错误: ${esc(j.message || ('HTTP ' + r.status))}</span>`;
+      return;
+    }
+    body.innerHTML = `<div style="font-size:11px;color:#999;margin-bottom:6px;">${esc(j.data.log_path)}</div>
+      <pre>${esc(j.data.content)}</pre>`;
+  } catch (e) {
+    body.innerHTML = `<span style="color:#ff4d4f">请求失败: ${esc(e.message)}</span>`;
+  }
+}
+
+// 3. 下载日志
+async function downloadLog() {
+  const el = document.getElementById('dlStatus');
+  const user = document.getElementById('dlUser').value;
+  const date = document.getElementById('dlDate').value;
+  if (!user || !date) { el.innerHTML = '<span style="color:#fa8c16">请选择用户和日期</span>'; return; }
+  await downloadLogDirect(user, date);
+}
+
+async function downloadLogDirect(userId, logDate) {
+  const el = document.getElementById('dlStatus');
+  el.innerHTML = '<span style="color:#999">下载中...</span>';
+  try {
+    const r = await fetch(`${API()}/api/v1/logs/download`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, log_date: logDate }),
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      el.innerHTML = `<span style="color:#ff4d4f">${r.status}: ${esc(j.message || '下载失败')}</span>`;
+      return;
+    }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${userId}_${logDate}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    el.innerHTML = `<span style="color:#52c41a">下载成功: ${esc(userId)}_${esc(logDate)}.txt (${(blob.size/1024).toFixed(1)} KB)</span>`;
+  } catch (e) {
+    el.innerHTML = `<span style="color:#ff4d4f">下载失败: ${esc(e.message)}</span>`;
+  }
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s) { return esc(s).replace(/'/g,'&#39;'); }
+
+// 初始化日期
+document.getElementById('dlDate').value = new Date().toISOString().slice(0,10);
+document.getElementById('filterDateStart').value = new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+document.getElementById('filterDateEnd').value = new Date().toISOString().slice(0,10);
+
+// 启动时健康检查 + 自动加载用户列表
+checkHealth();
+getUsers();
+</script>
+</div>
+</body>
+</html>

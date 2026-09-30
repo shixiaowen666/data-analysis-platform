@@ -1,0 +1,199 @@
+/* ============================================================
+   Vant 主题覆写 · 浅蓝科技风 + 移动端触控尺寸
+   ============================================================ */
+
+/* ---------- 按钮 ---------- */
+.van-button {
+  border-radius: var(--r-sm);
+  font-size: var(--fs-14);
+  transition: transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+
+  &::before {
+    display: none;
+  }
+  &:active {
+    transform: scale(0.975);
+  }
+}
+
+.van-button--primary {
+  background: var(--g-brand);
+  border-color: transparent;
+  box-shadow: var(--sh-brand);
+}
+
+.van-button--info {
+  background: var(--c-brand-50);
+  border-color: var(--c-brand-200);
+  color: var(--c-brand-600);
+}
+
+.van-button--default {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: var(--bd-base);
+  color: var(--c-ink-700);
+}
+
+.van-button--small {
+  height: 32px;
+  line-height: 30px;
+  padding: 0 12px;
+  font-size: var(--fs-13);
+}
+
+.van-button--mini {
+  height: 28px;
+  line-height: 26px;
+  font-size: var(--fs-12);
+}
+
+.van-button--disabled {
+  opacity: 0.5;
+}
+
+/* ---------- 弹出层 ---------- */
+.van-popup {
+  background: var(--bg-page);
+}
+
+.van-popup--bottom.van-popup--round {
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+}
+
+.van-overlay {
+  background: var(--bg-mask);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* ---------- 输入框 ---------- */
+.van-field {
+  background: transparent;
+}
+
+.van-field__control {
+  color: var(--c-ink-800);
+  &::placeholder {
+    color: var(--c-ink-400);
+  }
+}
+
+.van-cell::after {
+  border-color: var(--bd-light);
+}
+
+/* ---------- 日历 ---------- */
+.van-calendar {
+  --van-blue: #2e6be6;
+}
+.van-calendar__header {
+  box-shadow: 0 2px 10px rgba(29, 62, 120, 0.06);
+}
+.van-calendar__selected-day {
+  background: var(--g-brand);
+  border-radius: var(--r-sm);
+}
+.van-calendar__day--start,
+.van-calendar__day--end,
+.van-calendar__day--start-end {
+  background: var(--g-brand);
+}
+.van-calendar__day--middle {
+  color: var(--c-brand-600);
+  &::after {
+    background: var(--c-brand-500);
+    opacity: 0.1;
+  }
+}
+.van-calendar__confirm .van-button {
+  background: var(--g-brand);
+  border: none;
+  height: 44px;
+  line-height: 44px;
+  border-radius: var(--r-sm);
+}
+.van-calendar__footer {
+  padding-bottom: calc(10px + var(--safe-bottom));
+}
+
+/* ---------- Loading ---------- */
+.van-loading__spinner {
+  color: var(--c-brand-500);
+}
+.van-loading__text {
+  color: var(--c-ink-500);
+  font-size: var(--fs-13);
+}
+
+/* ---------- Toast ---------- */
+.van-toast {
+  border-radius: var(--r-md);
+  background: rgba(23, 37, 60, 0.86);
+  backdrop-filter: blur(8px);
+  font-size: var(--fs-14);
+  padding: 12px 16px;
+  min-width: 100px;
+  max-width: 76%;
+  line-height: 1.5;
+}
+
+.van-toast--top {
+  top: calc(var(--safe-top) + 64px);
+}
+
+/* ---------- Notify ---------- */
+.van-notify {
+  padding: 10px 16px;
+  font-size: var(--fs-14);
+  padding-top: calc(10px + var(--safe-top));
+}
+.van-notify--danger {
+  background: linear-gradient(135deg, #ef5a5f, #e5484d);
+}
+.van-notify--success {
+  background: linear-gradient(135deg, #19bf94, #10ab7f);
+}
+.van-notify--warning {
+  background: linear-gradient(135deg, #f2a53a, #e79217);
+}
+.van-notify--primary {
+  background: var(--g-brand);
+}
+
+/* ---------- Swipe 指示器 ---------- */
+.van-swipe__indicator {
+  background: var(--c-ink-300);
+  opacity: 1;
+  width: 5px;
+  height: 5px;
+  &--active {
+    background: var(--c-brand-500);
+    width: 14px;
+    border-radius: 3px;
+  }
+}
+
+/* ---------- Tag ---------- */
+.van-tag {
+  border-radius: var(--r-full);
+  padding: 3px 9px;
+  font-size: var(--fs-12);
+  line-height: 1.35;
+}
+
+/* ---------- Empty ---------- */
+.van-empty__description {
+  color: var(--c-ink-400);
+  font-size: var(--fs-13);
+}
+
+/* ---------- Progress / Slider 品牌色 ---------- */
+.van-progress__portion {
+  background: var(--g-brand);
+}
+
+/* ---------- Switch ---------- */
+.van-switch--on {
+  background: var(--c-brand-500);
+}

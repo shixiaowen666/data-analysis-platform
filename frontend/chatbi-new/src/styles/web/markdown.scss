@@ -1,0 +1,255 @@
+/* ============================================================
+   Markdown 渲染主题 · 浅蓝科技风
+   用于 思考过程 / 分析结论 / 总结
+   ============================================================ */
+
+.md-body {
+  font-size: var(--fs-14);
+  line-height: 1.78;
+  color: var(--c-ink-700);
+  word-break: break-word;
+
+  > *:first-child {
+    margin-top: 0;
+  }
+  > *:last-child {
+    margin-bottom: 0;
+  }
+
+  p {
+    margin: 0 0 10px;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5 {
+    margin: 16px 0 8px;
+    font-weight: 600;
+    color: var(--c-ink-900);
+    line-height: 1.45;
+  }
+
+  h1 {
+    font-size: var(--fs-18);
+  }
+  h2 {
+    font-size: var(--fs-16);
+  }
+  h3 {
+    font-size: var(--fs-15);
+  }
+  h4,
+  h5 {
+    font-size: var(--fs-14);
+  }
+
+  h2 {
+    padding-left: 10px;
+    border-left: 3px solid var(--c-brand-400);
+    border-radius: 2px;
+  }
+
+  strong {
+    color: var(--c-ink-900);
+    font-weight: 600;
+  }
+
+  em {
+    color: var(--c-brand-600);
+    font-style: normal;
+    background: var(--c-brand-50);
+    padding: 0 4px;
+    border-radius: 4px;
+  }
+
+  ul,
+  ol {
+    margin: 0 0 10px;
+    padding-left: 20px;
+  }
+
+  li {
+    margin-bottom: 5px;
+    &::marker {
+      color: var(--c-brand-400);
+    }
+  }
+
+  blockquote {
+    margin: 10px 0;
+    padding: 8px 12px;
+    border-left: 3px solid var(--c-cyan-300);
+    background: var(--c-cyan-50);
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+    color: var(--c-ink-600);
+    font-size: var(--fs-13);
+
+    p {
+      margin: 0;
+    }
+  }
+
+  code {
+    font-family: var(--ff-num);
+    font-size: 0.9em;
+    padding: 1.5px 5px;
+    border-radius: 5px;
+    background: var(--c-brand-50);
+    border: 1px solid var(--c-brand-100);
+    color: var(--c-brand-700);
+  }
+
+  pre {
+    margin: 10px 0;
+    padding: 12px;
+    border-radius: var(--r-sm);
+    background: var(--bg-sunk);
+    border: 1px solid var(--bd-light);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+
+    code {
+      background: none;
+      border: none;
+      padding: 0;
+      color: var(--c-ink-700);
+      font-size: var(--fs-12);
+      line-height: 1.7;
+      white-space: pre;
+    }
+  }
+
+  hr {
+    margin: 14px 0;
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--bd-base) 40%, var(--bd-base) 60%, transparent);
+  }
+
+  /* 表格：横向滚动 */
+  table {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: var(--fs-12);
+    white-space: nowrap;
+
+    th,
+    td {
+      padding: 7px 10px;
+      border: 1px solid var(--bd-light);
+      text-align: left;
+    }
+
+    th {
+      background: var(--c-brand-50);
+      color: var(--c-brand-700);
+      font-weight: 600;
+    }
+
+    tr:nth-child(even) td {
+      background: rgba(246, 250, 255, 0.7);
+    }
+  }
+
+  a {
+    color: var(--c-brand-500);
+    border-bottom: 1px solid var(--c-brand-200);
+  }
+
+  img {
+    border-radius: var(--r-sm);
+    margin: 8px 0;
+  }
+}
+
+/* ============================================================
+   思考过程时间线（h3 → 编号节点 + 连接线）
+   ============================================================ */
+.md-timeline {
+  .md-step {
+    position: relative;
+    padding-left: 28px;
+    padding-bottom: 12px;
+
+    /* 连接线 */
+    &::before {
+      content: '';
+      position: absolute;
+      left: 9px;
+      top: 21px;
+      bottom: 0;
+      width: 2px;
+      border-radius: 2px;
+      background: linear-gradient(180deg, var(--c-brand-200), var(--c-brand-100));
+    }
+
+    &:last-child {
+      padding-bottom: 2px;
+      &::before {
+        display: none;
+      }
+    }
+
+    /* 编号节点 */
+    > .md-step__no {
+      position: absolute;
+      left: 0;
+      top: 2px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--g-brand);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 20px;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(46, 107, 230, 0.22);
+      z-index: 1;
+    }
+
+    > .md-step__body {
+      font-size: var(--fs-13);
+      line-height: 1.75;
+      color: var(--c-ink-600);
+
+      h3 {
+        margin: 0 0 6px;
+        font-size: var(--fs-14);
+        color: var(--c-ink-900);
+        font-weight: 600;
+      }
+
+      p {
+        margin: 0 0 6px;
+      }
+
+      > *:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+
+  /* 无编号的纯段落块 */
+  .md-plain {
+    padding-left: 2px;
+    padding-bottom: 8px;
+    font-size: var(--fs-13);
+    color: var(--c-ink-600);
+    line-height: 1.75;
+
+    p {
+      margin: 0 0 6px;
+    }
+    > *:last-child {
+      margin-bottom: 0;
+    }
+  }
+}

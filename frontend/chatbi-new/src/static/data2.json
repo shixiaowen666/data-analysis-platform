@@ -1,0 +1,2565 @@
+{
+    "type": "ai",
+    "question": "查询2026年1月1日至2026年7月21日罗湖区每日的网供电量和地方电厂电量，按日期和供电类型分组",
+    "itemId": 1,
+    "chartData": {
+        "dataRequestDTO": {
+            "downloadFlag": null,
+            "dimList": [
+                {
+                    "id": 1,
+                    "dimKey": "ptdate",
+                    "dimName": "日期"
+                },
+                {
+                    "id": 73,
+                    "dimKey": "elec_supply_type",
+                    "dimName": "供电类型"
+                },
+                {
+                    "id": 77,
+                    "dimKey": "gdj",
+                    "dimName": "供电局名称"
+                }
+            ],
+            "indexList": [
+                {
+                    "id": 204,
+                    "indKey": "electricityvalue",
+                    "indName": "电力构成供电量",
+                    "fieldStyle": null,
+                    "decimalPoint": null
+                }
+            ],
+            "chartType": 1,
+            "orderList": null,
+            "top": null,
+            "filters": [
+                {
+                    "filterField": {
+                        "id": null,
+                        "key": "elec_supply_type",
+                        "name": "供电类型",
+                        "fieldClazz": 0
+                    },
+                    "filterValue": [
+                        "地方电厂电量（含光伏）",
+                        "网供电量"
+                    ],
+                    "operator": 5,
+                    "logicType": 0
+                },
+                {
+                    "filterField": {
+                        "id": null,
+                        "key": "gdj",
+                        "name": "供电局名称",
+                        "fieldClazz": 0
+                    },
+                    "filterValue": [
+                        "罗湖供电局",
+                        "罗湖局"
+                    ],
+                    "operator": 5,
+                    "logicType": 0
+                }
+            ],
+            "dateGranularity": "day",
+            "timeRange": {
+                "start": "2026-01-01",
+                "end": "2026-07-21"
+            },
+            "page": 1,
+            "pageSize": 20
+        },
+        "dataVO": {
+            "code": 200,
+            "message": "success",
+            "data": {
+                "sql": "select f.\"ptdate\" as \"ptdate\", f.\"elec_supply_type\" as \"elec_supply_type\", f.\"gdj\" as \"gdj\", sum(f.\"electricityvalue\") as \"electricityvalue\" from (select mainsrc.\"data_time\" as \"ptdate\", mainsrc.\"electricitytype\" as \"elec_supply_type\", mainsrc.\"org_name\" as \"gdj\", mainsrc.\"electricityvalue\" as \"electricityvalue\" from (with\n-- 1) 按天序列：仅用于分组遍历，绝不参与分区大表扫描条件\nday_series as (\n    select generate_series(\n        '2026-01-01 00:00:00'::timestamp,\n        '2026-07-21 00:00:00'::timestamp,\n        interval '1day'\n    ) as d                                                                              -- 遍历日 d\n),\n-- 2) 分区大表裁剪：右侧全为占位符字面量，裸列 data_time 触发静态分区裁剪(Static Prune)\n--    半开区间 [start, end+1day)，一次性只扫命中分区\npq_raw as (\n    select\n        pq.obj_detail_id,                                                               -- 关联键\n        pq.data_time,                                                                   -- 真实业务时间戳\n        pq.ap_total                                                                     -- 电量\n    from hydwsdb.mk_mc_anal_obj_day_pq as pq\n    where pq.data_time >= '2026-01-01 00:00:00'::timestamp\n      and pq.data_time <  '2026-07-21 00:00:00'::timestamp + interval '1day'\n),\n-- 3) 维度表：非时间参数 supply_org_no 的过滤条件已删除，但作为展示维度保留输出\n--    其余硬编码常量原样保留\nobj as (\n    select\n        a.obj_detail_id,                                                                -- 关联键\n        a.sort_code,                                                                    -- 分类编码\n        a.supply_org_no                                                                 -- 供电单位编码(展示维度)\n    from ams_app.mk_mc_analysis_obj_view as a\n    where a.sort_code in ('3','2')                       -- 硬编码常量，保留\n      and a.associated_file_type = '1'                  -- 硬编码常量，保留\n      and a.obj_type_code = '1'                          -- 硬编码常量，保留\n),\n-- 4) 按天 × supply_org_no × sort_code 聚合当日电量\npower_rs as (\n    select\n        ds.d                             as d,                                          -- 遍历日\n        o.supply_org_no                  as supply_org_no,                              -- 供电单位编码\n        o.sort_code                      as sort_code,                                  -- 分类编码\n        sum(pr.ap_total)                 as power                                       -- 当日电量\n    from day_series ds\n    left join obj    o  on 1=1\n    left join pq_raw pr on pr.obj_detail_id = o.obj_detail_id\n                       and pr.data_time     = ds.d                                      -- 当天归属：精确到天\n    group by ds.d, o.supply_org_no, o.sort_code\n)\nselect\n    to_char(prs.d,'YYYY-MM-DD')                            as data_time,                -- 真实业务日期(该行属于哪一天)\n    prs.supply_org_no                                      as supply_org_no,            -- 供电单位编码(展示维度)\n    org.org_name                                          as org_name,                 -- 供电单位名称(展示维度)\n    case when prs.sort_code = '3' then '地方电厂电量（含光伏）'\n         when prs.sort_code = '2' then '网供电量' end       as electricityType,          -- 电量类型\n    coalesce(to_char(prs.power/10000,'FM9999999999999999990.00'),'0.00') as electricityValue  -- 电量值(万kWh)\nfrom power_rs prs\nleft join ams_app.mk_mc_sys_org_levels org\n       on org.org_no = prs.supply_org_no                                                -- 通过供电单位编码关联组织名称\norder by prs.d, prs.supply_org_no, to_number(coalesce(to_char(prs.power/10000,'FM9999999999999999990.00'),'0.00')) desc) mainsrc) f where 1=1 and f.`elec_supply_type` in ('地方电厂电量（含光伏）', '网供电量') and f.`gdj` in ('罗湖供电局', '罗湖局') and f.`ptdate` >= '2026-01-01' and f.`ptdate` <= '2026-07-21' group by f.\"ptdate\", f.\"elec_supply_type\", f.\"gdj\" ORDER BY \"ptdate\" ASC\nlimit\n  1000 offset 0",
+                "columns": [
+                    {
+                        "key": "ptdate",
+                        "name": "日期",
+                        "type": "dimension",
+                        "unit": null,
+                        "precision": null
+                    },
+                    {
+                        "key": "elec_supply_type",
+                        "name": "供电类型",
+                        "type": "dimension",
+                        "unit": null,
+                        "precision": null
+                    },
+                    {
+                        "key": "gdj",
+                        "name": "供电局名称",
+                        "type": "dimension",
+                        "unit": null,
+                        "precision": null
+                    },
+                    {
+                        "key": "electricityvalue",
+                        "name": "电力构成供电量",
+                        "type": "indicator",
+                        "unit": "万千瓦时",
+                        "precision": 2
+                    }
+                ],
+                "records": [
+                    {
+                        "ptdate": "2026-01-01",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-01",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-02",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-02",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-03",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-03",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-04",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-04",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-05",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-05",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-06",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-06",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-07",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-07",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-08",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-08",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-09",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-09",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-10",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-10",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-11",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-11",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-12",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-12",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-13",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-13",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-14",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-14",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-15",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-15",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-16",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-16",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-17",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-17",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-18",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-18",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-19",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-19",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-20",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-20",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-21",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-21",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-22",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-22",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-23",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-23",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-24",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-24",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-25",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-25",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-26",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-26",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-27",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-27",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-28",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-28",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-29",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-29",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-30",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-30",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-31",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-01-31",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-01",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-01",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-02",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-02",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-03",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-03",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-04",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-04",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-05",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-05",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-06",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-06",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-07",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-07",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-08",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-08",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-09",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-09",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-10",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-10",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-11",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-11",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-12",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-12",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-13",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-13",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-14",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-14",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-15",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-15",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-16",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-16",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-17",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-17",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-18",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-18",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-19",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-19",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-20",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-20",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-21",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-21",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-22",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-22",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-23",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-23",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-24",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-24",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-25",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-25",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-26",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-26",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-27",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-27",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-28",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-02-28",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-01",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-01",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-02",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-02",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-03",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-03",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-04",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-04",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-05",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-05",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-06",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-06",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-07",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-07",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-08",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-08",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-09",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-09",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-10",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-10",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-11",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-11",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-12",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-12",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-13",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-13",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-14",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-14",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-15",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-15",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-16",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-16",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-17",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-17",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-18",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-18",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-19",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-19",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-20",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-20",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-21",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-21",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-22",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-22",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-23",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-23",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-24",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-24",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-25",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-25",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-26",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-26",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-27",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-27",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-28",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-28",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-29",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-29",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-30",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-30",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-31",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-03-31",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-01",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-01",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-02",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-02",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-03",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-03",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-04",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-04",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-05",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-05",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-06",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-06",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-07",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-07",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-08",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-08",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-09",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-09",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-10",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-10",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-11",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-11",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-12",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-12",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-13",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-13",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-14",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-14",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-15",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-15",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-16",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-16",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-17",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-17",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-18",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-18",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-19",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-19",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-20",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-20",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-21",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-21",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-22",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-22",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-23",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-23",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-24",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-24",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-25",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-25",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-26",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-26",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-27",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-27",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-28",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-28",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-29",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-29",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-30",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-04-30",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-01",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-01",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-02",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-02",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-03",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-03",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-04",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-04",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-05",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-05",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-06",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-06",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-07",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-07",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-08",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-08",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-09",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-09",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-10",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-10",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-11",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-11",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-12",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-12",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-13",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-13",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-14",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-14",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-15",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-15",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-16",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-16",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-17",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-17",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-18",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-18",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-19",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-19",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-20",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-20",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-21",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-21",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-22",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-22",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-23",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-23",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-24",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-24",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-25",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-25",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-26",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-26",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-27",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-27",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-28",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-28",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-29",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-29",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-30",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-30",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-31",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-05-31",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-01",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-01",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-02",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-02",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-03",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-03",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-04",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-04",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-05",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-05",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-06",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-06",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-07",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-07",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-08",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-08",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-09",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-09",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-10",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-10",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-11",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-11",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-12",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-12",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-13",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-13",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-14",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-14",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-15",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-15",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-16",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-16",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-17",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-17",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-18",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-18",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-19",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-19",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-20",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-20",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-21",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-21",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-22",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-22",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-23",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-23",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-24",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-24",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-25",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-25",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-26",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-26",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-27",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-27",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-28",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-28",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-29",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-29",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-30",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-06-30",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-01",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-01",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-02",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-02",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-03",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-03",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-04",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-04",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-05",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-05",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-06",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-06",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-07",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-07",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-08",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-08",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-09",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-09",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-10",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-10",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-11",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-11",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-12",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-12",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-13",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-13",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-14",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-14",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-15",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-15",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-16",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-16",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-17",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-17",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-18",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-18",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-19",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-19",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-20",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-20",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-21",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖局",
+                        "electricityvalue": 0.0
+                    },
+                    {
+                        "ptdate": "2026-07-21",
+                        "elec_supply_type": "地方电厂电量（含光伏）",
+                        "gdj": "罗湖供电局",
+                        "electricityvalue": 0.0
+                    }
+                ],
+                "total": 404,
+                "page": 1,
+                "pageSize": 1000
+            }
+        },
+        "aiChatVO": {
+            "question": "查询2026年1月1日至2026年7月21日罗湖区每日的网供电量和地方电厂电量，按日期和供电类型分组",
+            "itemId": 1,
+            "answer": null,
+            "feedback": null,
+            "reason": null,
+            "sqlAnswer": null,
+            "session_id": "fecb6867-dde2-4811-b967-e989ab59c817",
+            "chat_id": "6aba9f8b-8084-4fb2-b016-1a308e71977d"
+        }
+    },
+    "updateUser": "",
+    "updateTime": "2026-07-21 03:10:30",
+    "think": {
+        "status": null,
+        "message": "### 意图理解\n接下来进行问题拆解\nRequestID:fecb6867-dde2-4811-b967-e989ab59c817@6aba9f8b-8084-4fb2-b016-1a308e71977d\n原始问题:今年罗湖区各区的网供电量、地方电厂电量变化趋势如何？请列出累计值Top5。\n\n**step_1**:\n查询2026年至今罗湖区每日的网供电量和地方电厂电量数据\n**step_2**:\n计算每日电量的累计值，并提取变化趋势\n**step_3**:\n按供电类型分组，获取累计电量Top5的记录\n**step_4**:\n总结罗湖区网供电量和地方电厂电量的变化趋势，并列出累计值Top5\n### step_1-查询\n**执行计划**：{\"step_id\": \"step_1\", \"step_type\": \"query\", \"description\": \"查询2026年至今罗湖区每日的网供电量和地方电厂电量数据\", \"depends_on\": [], \"params\": {\"query_description\": \"查询2026年1月1日至2026年7月21日罗湖区每日的网供电量和地方电厂电量，按日期和供电类型分组\", \"time_range\": {\"start\": \"2026-01-01\", \"end\": \"2026-07-21\"}, \"entities\": [\"罗湖区\"], \"expected_table\": \"view_net_local_elec\", \"expected_columns\": [{\"name\": \"ptdate\", \"role\": \"dimension\", \"unit\": null, \"filter\": []}, {\"name\": \"elec_supply_type\", \"role\": \"dimension\", \"unit\": null, \"filter\": [{\"operator\": \"in\", \"values\": [\"地方电厂电量（含光伏）\", \"网供电量\"]}]}, {\"name\": \"gdj\", \"role\": \"dimension\", \"unit\": null, \"filter\": [{\"operator\": \"in\", \"values\": [\"罗湖供电局\", \"罗湖局\"]}]}, {\"name\": \"electricityvalue\", \"role\": \"measure\", \"unit\": \"万千瓦时\", \"filter\": []}]}}\n",
+        "speed": 62
+    },
+    "status": 1,
+    "interactionMode": null,
+    "enableContext": null,
+    "host": "172.17.0.1",
+    "questionRewriter": null,
+    "stepType": "query"
+}

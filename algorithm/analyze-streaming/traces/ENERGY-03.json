@@ -1,0 +1,39 @@
+{
+  "query_id": "ENERGY-03",
+  "query": "能量利用率连续三个月下降的场站有哪些？",
+  "timestamp": "2026-03-03T07:24:10.655607",
+  "pipeline_status": "success",
+  "strict_passed": true,
+  "fail_reason": "OK",
+  "answer": "根据数据分析结果，能量利用率连续三个月下降的场站有华北风电场A和华北风电场B。\n\n其中，华北风电场A的能量利用率从2025年2月的94.8%持续下降至2025年5月的90.2%，连续四个月呈下降趋势；华北风电场B的能量利用率从2025年3月的91.8%持续下降至2025年5月的89.5%，连续三个月呈下降趋势。其他场站未出现连续三个月下降的情况。",
+  "elapsed_seconds": 14.64,
+  "execution_log": [
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_1",
+      "step_type": "query"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_2",
+      "step_type": "compute"
+    },
+    {
+      "error_message": null,
+      "status": "success",
+      "step_id": "step_3",
+      "step_type": "summarize"
+    }
+  ],
+  "data_summary": {
+    "row_count": 7,
+    "columns": [
+      "station_name",
+      "month",
+      "energy_utilization",
+      "consecutive_match"
+    ]
+  }
+}

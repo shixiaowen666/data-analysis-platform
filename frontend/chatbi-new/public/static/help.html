@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>指标维度问数范围</title>
+<style>
+/* 关键：不要写 overflow: hidden */
+  html, body {
+    margin: 0;
+    /* 不要写 overflow: hidden */
+  }
+
+  /* 隐藏滚动条，但还能滚 */
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    display: none;
+  }
+  html, body {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  :root {
+    --primary: #1a5fb4;
+    --primary-light: #e8f0fe;
+    --border: #d9e2ef;
+    --text: #1f2937;
+    --text-secondary: #5f6b7a;
+    --bg: #f5f7fa;
+    --card-bg: #ffffff;
+    --accent: #0b6e4f;
+    --accent-light: #e6f4ef;
+    --warn: #b45309;
+    --warn-light: #fef3c7;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 24px;
+  }
+
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+
+  /* 头部 */
+  header {
+    background: linear-gradient(135deg, #1a5fb4 0%, #0d3b7a 100%);
+    color: #fff;
+    border-radius: 14px;
+    padding: 32px 36px;
+    margin-bottom: 24px;
+    box-shadow: 0 6px 20px rgba(26, 95, 180, 0.25);
+  }
+
+  header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+  }
+
+  header p {
+    font-size: 15px;
+    opacity: 0.9;
+    max-width: 900px;
+  }
+
+  /* 搜索栏 */
+  .search-bar {
+    position: sticky;
+    top: 12px;
+    z-index: 100;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  }
+
+  .search-bar input {
+    flex: 1;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-bar input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(26, 95, 180, 0.12);
+  }
+
+  .search-bar button {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+
+  .search-bar button:hover {
+    background: #0d3b7a;
+  }
+
+  /* 概览卡片 */
+  .overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .overview-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .overview-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  }
+
+  .overview-card .num {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  .overview-card .label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+
+  /* 主题卡片 */
+  .theme-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 18px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: box-shadow 0.2s;
+  }
+
+  .theme-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  }
+
+  .theme-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 22px;
+    background: var(--primary-light);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .theme-header h2 {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .theme-header .badge {
+    font-size: 12px;
+    font-weight: 500;
+    background: var(--primary);
+    color: #fff;
+    border-radius: 20px;
+    padding: 2px 10px;
+  }
+
+  .theme-header .toggle {
+    font-size: 20px;
+    color: var(--primary);
+    transition: transform 0.3s;
+  }
+
+  .theme-card.collapsed .toggle {
+    transform: rotate(-90deg);
+  }
+
+  .theme-card.collapsed .theme-body {
+    display: none;
+  }
+
+  .theme-body {
+    padding: 18px 22px 22px;
+  }
+
+  /* 表格 */
+  .indicator-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin-bottom: 14px;
+  }
+
+  .indicator-table th {
+    background: #f0f4fa;
+    color: var(--text);
+    font-weight: 600;
+    text-align: left;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  .indicator-table td {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  .indicator-table tbody tr:nth-child(even) {
+    background: #fafbfd;
+  }
+
+  .indicator-table tbody tr:hover {
+    background: var(--primary-light);
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin: 2px 4px 2px 0;
+    background: var(--accent-light);
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  .tag.dim {
+    background: #eef2ff;
+    color: #4338ca;
+  }
+
+  /* 示例问数 */
+  .examples {
+    background: #f8fafc;
+    border-left: 4px solid var(--primary);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px;
+    margin-top: 12px;
+  }
+
+  .examples h4 {
+    font-size: 14px;
+    color: var(--primary);
+    margin-bottom: 8px;
+  }
+
+  .examples ul {
+    list-style: none;
+    padding-left: 0;
+  }
+
+  .examples li {
+    font-size: 14px;
+    color: var(--text-secondary);
+    padding: 4px 0 4px 20px;
+    position: relative;
+  }
+
+  .examples li::before {
+    content: "?";
+    position: absolute;
+    left: 0;
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  /* 维度组合 */
+  .combo-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  .combo-table th {
+    background: #f0f4fa;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    text-align: left;
+  }
+
+  .combo-table td {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+  }
+
+  .combo-table tbody tr:nth-child(even) {
+    background: #fafbfd;
+  }
+
+  /* 底部 */
+  footer {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 13px;
+    padding: 28px 0 12px;
+    border-top: 1px solid var(--border);
+    margin-top: 32px;
+  }
+
+  /* 高亮搜索 */
+  mark {
+    background: #fde68a;
+    color: #92400e;
+    padding: 0 2px;
+    border-radius: 2px;
+  }
+
+  /* 无结果 */
+  .no-result {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 40px 0;
+    font-size: 15px;
+    display: none;
+  }
+
+  @media (max-width: 640px) {
+    body { padding: 12px; }
+    header { padding: 22px 18px; }
+    header h1 { font-size: 22px; }
+    .theme-header { padding: 14px 16px; }
+    .theme-body { padding: 14px 16px 18px; }
+    .indicator-table { font-size: 13px; }
+    .indicator-table th, .indicator-table td { padding: 7px 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>指标维度问数范围</h1>
+    <p>
+      基于《指标维度统计 v01》中「指标-维度映射」整理，覆盖供电、用电、发电、光伏、线损、抄表、采集、计量、档案、工单、终端、电表、用户、负荷、电量、市场交易等业务域。
+      支持按时间、组织、用户、行业、设备、统计类型等维度进行多维度问数、对比、下钻与分析。
+    </p>
+  </header>
+
+  <!-- 搜索栏 -->
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="输入关键词搜索指标、维度或问数主题，如：光伏、抄表率、工单、线损……">
+    <button onclick="clearSearch()">清空</button>
+  </div>
+
+  <!-- 概览 -->
+  <div class="overview">
+    <div class="overview-card">
+      <div class="num">12</div>
+      <div class="label">业务主题</div>
+    </div>
+    <div class="overview-card">
+      <div class="num">200+</div>
+      <div class="label">指标项</div>
+    </div>
+    <div class="overview-card">
+      <div class="num">30+</div>
+      <div class="label">维度字段</div>
+    </div>
+    <div class="overview-card">
+      <div class="num">10+</div>
+      <div class="label">典型问数示例</div>
+    </div>
+  </div>
+
+  <!-- 主题卡片容器 -->
+  <div id="themeContainer">
+
+    <!-- 1. 供电量与电量类 -->
+    <div class="theme-card" data-keywords="供电量 电量 日供电量 网供电量 转供电量 线路供电量 电压等级 地区供电量 线损率 行业用电量 日用电量">
+      <div class="theme-header" onclick="toggleCard(this)">
+        <h2><span>⚡</span> 供电量与电量类 <span class="badge">12+ 指标</span></h2>
+        <span class="toggle">▾</span>
+      </div>
+      <div class="theme-body">
+        <table class="indicator-table">
+          <thead>
+            <tr>
+              <th>指标名</th>
+              <th>可用维度</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>日供电量</td>
+              <td><span class="tag dim">供电局名称</span><span class="tag dim">日期</span></td>
+            </tr>
+            <tr>
+              <td>地方电厂（含光伏）电量 / 网供电量</td>
+              <td><span class="tag dim">供电局名称</span><span class="tag dim">日期</span></td>
+            </tr>
+            <tr>
+              <td>转供电量</td>
+              <td><span class="tag dim">供电局名称</span><span class="tag dim">日期</span></td>
+            </tr>
+            <tr>
+              <td>线路供电量</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span><span class="tag dim">线路类型名称</span><span class="tag dim">能源线路名称</span></td>
+            </tr>
+            <tr>
+              <td>电压等级供电量</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span><span class="tag dim">电压等级线路名称</span></td>
+            </tr>
+            <tr>
+              <td>地区供电量</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">区线路名称</span><span class="tag dim">供电局名称</span></td>
+            </tr>
+            <tr>
+              <td>深圳分区输入/输出电量、线损率、上下限阈值</td>
+              <td><span class="tag dim">日期</span></td>
+            </tr>
+            <tr>
+              <td>行业用电量 / 用电量占比</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">市供电局</span><span class="tag dim">区供电局</span><span class="tag dim">供电分局</span><span class="tag dim">行业编码</span><span class="tag dim">行业名称</span></td>
+            </tr>
+            <tr>
+              <td>全社会行业用电量</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">市供电局</span><span class="tag dim">区供电局</span><span class="tag dim">供电分局</span><span class="tag dim">行业名称</span></td>
+            </tr>
+            <tr>
+              <td>日用电量</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">市供电局</span><span class="tag dim">区供电局</span><span class="tag dim">供电分局</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="examples">
+          <h4>典型问数</h4>
+          <ul>
+            <li>2026年9月20日各供电局的日供电量是多少？</li>
+            <li>2026年9月20日各行业用电量及用电量占比是多少？</li>
+            <li>2026年9月20日各电压等级线路的供电量是多少？</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 光伏类 -->
+    <div class="theme-card" data-keywords="光伏 上网电量 用电电量 发电电量 用户数 分布式光伏 年累计发电量 年累计上网电量 自用量 本日负荷有功 光伏电厂数">
+      <div class="theme-header" onclick="toggleCard(this)">
+        <h2><span>☀️</span> 光伏类 <span class="badge">15+ 指标</span></h2>
+        <span class="toggle">▾</span>
+      </div>
+      <div class="theme-body">
+        <table class="indicator-table">
+          <thead>
+            <tr><th>指标名</th><th>可用维度</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>光伏上网电量 / 光伏用电电量 / 光伏发电电量</td>
+              <td><span class="tag dim">供电分局</span><span class="tag dim">日期</span><span class="tag dim">市供电局</span><span class="tag dim">区供电局</span></td>
+            </tr>
+            <tr>
+              <td>光伏上网用户数 / 光伏用电用户数 / 光伏发电用户数</td>
+              <td><span class="tag dim">供电分局</span><span class="tag dim">日期</span><span class="tag dim">市供电局</span><span class="tag dim">区供电局</span></td>
+            </tr>
+            <tr>
+              <td>年累计发电量 / 年累计上网电量 / 自用量</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">市供电局</span><span class="tag dim">区供电局</span><span class="tag dim">供电分局</span></td>
+            </tr>
+            <tr>
+              <td>分布式光伏发电量</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">市供电局</span><span class="tag dim">区供电局</span><span class="tag dim">供电分局</span></td>
+            </tr>
+            <tr>
+              <td>本日负荷有功</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">时间点</span><span class="tag dim">市供电局</span><span class="tag dim">区供电局</span><span class="tag dim">供电分局</span><span class="tag dim">光伏发电负荷类型</span></td>
+            </tr>
+            <tr>
+              <td>光伏用户上网电量 / 用电量 / 平均负荷值 / 最大负荷</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">市供电局</span><span class="tag dim">区供电局</span><span class="tag dim">供电分局</span><span class="tag dim">用电量最大负荷时间</span></td>
+            </tr>
+            <tr>
+              <td>光伏发电户数 / 上网户数 / 用电户数 / 光伏电厂数</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="examples">
+          <h4>典型问数</h4>
+          <ul>
+            <li>2026年9月20日各供电分局的光伏发电电量、上网电量、用电电量是多少？</li>
+            <li>2026年9月20日各市供电局的光伏用户数、光伏电厂数是多少？</li>
+            <li>2026年9月20日各时间点的本日负荷有功是多少？</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. 用户与档案类 -->
+    <div class="theme-card" data-keywords="用户 档案 用电户 合同容量 覆盖率 交易属性 发电户 购电户 四可用户 总用户数 用户占比 台区考核 专变用户 低压用户 趸售用户 全量用户 终端用户 覆盖用户">
+      <div class="theme-header" onclick="toggleCard(this)">
+        <h2><span>👥</span> 用户与档案类 <span class="badge">25+ 指标</span></h2>
+        <span class="toggle">▾</span>
+      </div>
+      <div class="theme-body">
+        <table class="indicator-table">
+          <thead>
+            <tr><th>指标名</th><th>可用维度</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>用电户用户数 / 合同容量 / 覆盖率</td>
+              <td><span class="tag dim">用电户类型</span><span class="tag dim">市局供电局名称 / 供电局名称</span><span class="tag dim">日期</span></td>
+            </tr>
+            <tr>
+              <td>用户交易属性用户数 / 用电量</td>
+              <td><span class="tag dim">市供电局</span><span class="tag dim">区供电局</span><span class="tag dim">供电分局</span><span class="tag dim">日期</span><span class="tag dim">用电量用户类型名称</span></td>
+            </tr>
+            <tr>
+              <td>发电户数 / 购电户数 / 用电户数</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">市供电局</span><span class="tag dim">区供电局</span><span class="tag dim">供电分局</span></td>
+            </tr>
+            <tr>
+              <td>四可用户总数 / 公变用户数 / 专变用户数</td>
+              <td><span class="tag dim">四可数据类型名称</span><span class="tag dim">日期</span><span class="tag dim">市供电局</span><span class="tag dim">区供电局</span><span class="tag dim">供电分局</span></td>
+            </tr>
+            <tr>
+              <td>总用户数 / 用户数 / 用户占比</td>
+              <td><span class="tag dim">市供电局</span><span class="tag dim">区供电局</span><span class="tag dim">供电分局</span><span class="tag dim">用户分布类型</span></td>
+            </tr>
+            <tr>
+              <td>台区考核户数 / 容量、专变/低压/趸售用户数 / 容量</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">市供电局</span><span class="tag dim">区供电局</span><span class="tag dim">供电分局</span></td>
+            </tr>
+            <tr>
+              <td>全量用户总数 / 变电站座数 / 装机容量 / 地方电厂座数 / 装机容量</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span></td>
+            </tr>
+            <tr>
+              <td>电厂户数 / 公变用户数 / 厂站户数 / 光伏用电户数 / 工业园区户数及各占比</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span></td>
+            </tr>
+            <tr>
+              <td>终端用户总数 / 覆盖用户数 / 未覆盖用户数 / 覆盖率 / 修正后覆盖率 / 白名单数</td>
+              <td><span class="tag dim">供电局名称</span><span class="tag dim">日期</span><span class="tag dim">覆盖率用户类型</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="examples">
+          <h4>典型问数</h4>
+          <ul>
+            <li>2026年9月20日各供电局的专变用户数、低压用户数、趸售用户数分别是多少？</li>
+            <li>2026年9月20日各用电户类型的用电户合同容量、覆盖率是多少？</li>
+            <li>2026年9月20日各覆盖率用户类型的覆盖率、修正后覆盖率是多少？</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. 负荷与最大负荷类 -->
+    <div class="theme-card" data-keywords="负荷 最大负荷 日最大负荷 月最大负荷 年最大负荷 用电负荷 平均负荷 专变用户负荷 低压用户负荷 趸售用户负荷">
+      <div class="theme-header" onclick="toggleCard(this)">
+        <h2><span>📈</span> 负荷与最大负荷类 <span class="badge">8+ 指标</span></h2>
+        <span class="toggle">▾</span>
+      </div>
+      <div class="theme-body">
+        <table class="indicator-table">
+          <thead>
+            <tr><th>指标名</th><th>可用维度</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>用电负荷</td>
+              <td><span class="tag dim">行业编码</span><span class="tag dim">行业名称</span><span class="tag dim">供电局名称</span><span class="tag dim">查询时间戳</span><span class="tag dim">日期</span></td>
+            </tr>
+            <tr>
+              <td>日最大负荷 / 月最大负荷 / 年最大负荷</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span><span class="tag dim">供电量日/月/年最大负荷时间</span></td>
+            </tr>
+            <tr>
+              <td>用电量最大负荷</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span><span class="tag dim">用电量最大负荷时间</span></td>
+            </tr>
+            <tr>
+              <td>专变/低压/趸售用户负荷最大值</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span></td>
+            </tr>
+            <tr>
+              <td>本日负荷有功</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">时间点</span><span class="tag dim">市供电局</span><span class="tag dim">区供电局</span><span class="tag dim">供电分局</span><span class="tag dim">光伏发电负荷类型</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="examples">
+          <h4>典型问数</h4>
+          <ul>
+            <li>2026年9月20日各供电局的日最大负荷、月最大负荷、年最大负荷是多少？</li>
+            <li>2026年9月20日各行业的用电负荷是多少？</li>
+            <li>2026年9月20日各供电局的专变用户负荷最大值、低压用户负荷最大值是多少？</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. 抄表、采集与完整率类 -->
+    <div class="theme-card" data-keywords="抄表 采集 自动抄表率 实抄数 应抄数 抄读失败 完整率 在线率 应采电表 数据项 采集完整率 现货数据完整率 表计总数">
+      <div class="theme-header" onclick="toggleCard(this)">
+        <h2><span>📋</span> 抄表、采集与完整率类 <span class="badge">30+ 指标</span></h2>
+        <span class="toggle">▾</span>
+      </div>
+      <div class="theme-body">
+        <table class="indicator-table">
+          <thead>
+            <tr><th>指标名</th><th>可用维度</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>变电站户/电厂户/专变客户/台区考核户/低压客户自动抄表率及相关实抄、应抄、失败条数</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span></td>
+            </tr>
+            <tr>
+              <td>用户实抄数 / 应抄数 / 抄表率、电厂实抄数 / 应抄数 / 数据完整率</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span></td>
+            </tr>
+            <tr>
+              <td>采集指标应抄总数 / 实抄总数 / 总体数据完整率 / 应在线点数 / 实在线点数 / 总在线率</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span></td>
+            </tr>
+            <tr>
+              <td>自动抄表率应抄数 / 成功数 / 失败数 / 自动抄表率</td>
+              <td><span class="tag dim">供电局名称</span><span class="tag dim">用户类型</span><span class="tag dim">日期</span></td>
+            </tr>
+            <tr>
+              <td>应采电表数 / 应抄数据项数 / 实抄数据项数 / 未抄数据项数 / 采集完整率</td>
+              <td><span class="tag dim">供电局名称</span><span class="tag dim">用户类型</span><span class="tag dim">数据项类型</span><span class="tag dim">日期</span></td>
+            </tr>
+            <tr>
+              <td>现货数据完整率 / 表计总数 / 应采数 / 实采数 / 未采数</td>
+              <td><span class="tag dim">供电局名称</span><span class="tag dim">统计类别</span><span class="tag dim">日期</span><span class="tag dim">数据完整率统计类型</span><span class="tag dim">主终端标志</span><span class="tag dim">现货统计分类</span><span class="tag dim">主副表标志</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="examples">
+          <h4>典型问数</h4>
+          <ul>
+            <li>2026年9月20日各供电局的低压用户自动抄表率是多少？</li>
+            <li>2026年9月20日各供电局的采集指标总体数据完整率是多少？</li>
+            <li>2026年9月20日各用户类型的自动抄表率、采集完整率是多少？</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. 计量、终端、电表与时钟类 -->
+    <div class="theme-card" data-keywords="计量 终端 电表 时钟 校时 合格率 电能表 表码 抄见率 拟合率 终端总数 时钟合格率 停电 召测失败">
+      <div class="theme-header" onclick="toggleCard(this)">
+        <h2><span>⏱️</span> 计量、终端、电表与时钟类 <span class="badge">25+ 指标</span></h2>
+        <span class="toggle">▾</span>
+      </div>
+      <div class="theme-body">
+        <table class="indicator-table">
+          <thead>
+            <tr><th>指标名</th><th>可用维度</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>计量点数 / 应发布表码数 / 暂停表码数 / 抄见数 / 拟合数 / 抄见率 / 拟合率</td>
+              <td><span class="tag dim">档案类别</span><span class="tag dim">供电局名称</span><span class="tag dim">日期</span><span class="tag dim">数据发布指标统计类型</span></td>
+            </tr>
+            <tr>
+              <td>运行终端总数 / 校时未完成数 / 时钟合格数 / 不合格数 / 合格率 / 停电数 / 召测失败数</td>
+              <td><span class="tag dim">终端类型</span><span class="tag dim">供电局名称</span><span class="tag dim">日期</span></td>
+            </tr>
+            <tr>
+              <td>运行电表总数 / 校时未完成数 / 时钟合格数 / 不合格数 / 停电数 / 召测失败数 / 合格率 / 校时完成率</td>
+              <td><span class="tag dim">供电局名称</span><span class="tag dim">日期</span><span class="tag dim">电表校时统计用户类型</span></td>
+            </tr>
+            <tr>
+              <td>电能表统计数量 / 数量占比</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">电能表统计类型</span><span class="tag dim">供电局名称</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="examples">
+          <h4>典型问数</h4>
+          <ul>
+            <li>2026年9月20日各终端类型的时钟合格率是多少？</li>
+            <li>2026年9月20日各供电局的电表时钟合格率、校时完成率是多少？</li>
+            <li>2026年9月20日各电能表统计类型的电能表统计数量及占比是多少？</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. 线损与台区类 -->
+    <div class="theme-card" data-keywords="线损 台区 分区线损率 分线 分台 合格率 合格数 不合格数 轻载 分压线损 站计专线 普通线路">
+      <div class="theme-header" onclick="toggleCard(this)">
+        <h2><span>📉</span> 线损与台区类 <span class="badge">15+ 指标</span></h2>
+        <span class="toggle">▾</span>
+      </div>
+      <div class="theme-body">
+        <table class="indicator-table">
+          <thead>
+            <tr><th>指标名</th><th>可用维度</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>分区线损率</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span></td>
+            </tr>
+            <tr>
+              <td>分线总数 / 合格数 / 不合格数 / 合格率</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span></td>
+            </tr>
+            <tr>
+              <td>分台总合格率 / 合格数 / 不合格数 / 轻载合格数 / 轻载合格率 / 台区总数</td>
+              <td><span class="tag dim">供电局名称</span><span class="tag dim">日期</span></td>
+            </tr>
+            <tr>
+              <td>深圳分区线损率 / 上限阈值 / 下限阈值</td>
+              <td><span class="tag dim">日期</span></td>
+            </tr>
+            <tr>
+              <td>分压线损率 / 分压上限阈值 / 分压下限阈值</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span><span class="tag dim">分压线损电压等级</span></td>
+            </tr>
+            <tr>
+              <td>站计专线数量 / 普通线路数量</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="examples">
+          <h4>典型问数</h4>
+          <ul>
+            <li>2026年9月20日各供电局的分区线损率、分线合格率是多少？</li>
+            <li>2026年9月20日各供电局的分台总合格率、轻载合格率是多少？</li>
+            <li>2026年9月20日各分压线损电压等级的分压线损率、上下限阈值是多少？</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8. 业扩与市场交易类 -->
+    <div class="theme-card" data-keywords="业扩 市场交易 业扩户数 容量 业扩用电量 市场主体 计量点 现货档案 异常数 用户档案合格数">
+      <div class="theme-header" onclick="toggleCard(this)">
+        <h2><span>💼</span> 业扩与市场交易类 <span class="badge">12+ 指标</span></h2>
+        <span class="toggle">▾</span>
+      </div>
+      <div class="theme-body">
+        <table class="indicator-table">
+          <thead>
+            <tr><th>指标名</th><th>可用维度</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>业扩户数 / 容量 / 业扩用电量 / 业扩年用电量</td>
+              <td><span class="tag dim">市供电局</span><span class="tag dim">区供电局</span><span class="tag dim">供电分局</span><span class="tag dim">业扩用户名称</span><span class="tag dim">日期</span></td>
+            </tr>
+            <tr>
+              <td>市场主体构成用户数 / 用户电能表数 / 电厂数 / 电厂电能表数</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span></td>
+            </tr>
+            <tr>
+              <td>市场主体构成用户计量点数 / 电厂计量点数 / 现货档案市场主体用户总数 / 计量点总数</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span></td>
+            </tr>
+            <tr>
+              <td>现货档案异常数 / 告警异常数 / 用户档案合格数</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="examples">
+          <h4>典型问数</h4>
+          <ul>
+            <li>2026年9月20日各市供电局、区供电局、供电分局的业扩户数、容量是多少？</li>
+            <li>2026年9月20日各供电局的市场主体构成用户数、电厂数是多少？</li>
+            <li>2026年9月20日各供电局的现货档案异常数、用户档案合格数是多少？</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9. 工单与服务类 -->
+    <div class="theme-card" data-keywords="工单 服务 工单总数 超时 未超时 归档 处理时长 及时率 完成率 班组 部门 用户类别 工单类型">
+      <div class="theme-header" onclick="toggleCard(this)">
+        <h2><span>🛠️</span> 工单与服务类 <span class="badge">10+ 指标</span></h2>
+        <span class="toggle">▾</span>
+      </div>
+      <div class="theme-body">
+        <table class="indicator-table">
+          <thead>
+            <tr><th>指标名</th><th>可用维度</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>工单总数 / 处理中工单超时数 / 未超时数 / 未归档工单数 / 已归档工单超时数 / 未超时数 / 总处理时长 / 平均时长 / 及时率 / 完成率</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">统计类型</span><span class="tag dim">供电局名称</span><span class="tag dim">班组名称</span><span class="tag dim">部门名称</span><span class="tag dim">用户类别</span><span class="tag dim">工单类型</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="examples">
+          <h4>典型问数</h4>
+          <ul>
+            <li>2026年9月20日各供电局的工单及时率、工单完成率是多少？</li>
+            <li>2026年9月20日各班组、部门的已归档平均时长、工单总数是多少？</li>
+            <li>2026年9月20日各工单类型的处理中工单超时数、未超时数是多少？</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10. 电能质量与告警类 -->
+    <div class="theme-card" data-keywords="电能质量 告警 暂降 暂升 短时中断 闪变 谐波 监测用户 敏感客户 新装设备 在线率">
+      <div class="theme-header" onclick="toggleCard(this)">
+        <h2><span>⚠️</span> 电能质量与告警类 <span class="badge">20+ 指标</span></h2>
+        <span class="toggle">▾</span>
+      </div>
+      <div class="theme-body">
+        <table class="indicator-table">
+          <thead>
+            <tr><th>指标名</th><th>可用维度</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>监测用户数量 / 敏感客户数量 / 新装设备数量 / 在线率</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span></td>
+            </tr>
+            <tr>
+              <td>区局敏感客户数量</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span></td>
+            </tr>
+            <tr>
+              <td>近七日/近一日暂降、暂升、短时中断、闪变越限告警数量</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span></td>
+            </tr>
+            <tr>
+              <td>近七日/近一日谐波含有率缺陷、谐波群畸变率越限</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="examples">
+          <h4>典型问数</h4>
+          <ul>
+            <li>2026年9月20日各供电局的近七日暂降告警数量、近一日暂降告警数量是多少？</li>
+            <li>2026年9月20日各供电局的敏感客户数量、监测用户数量、在线率是多少？</li>
+            <li>2026年9月20日各供电局的近七日谐波含有率缺陷、谐波群畸变率越限是多少？</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 11. 设备资产类 -->
+    <div class="theme-card" data-keywords="设备 资产 变电站 线路 馈线 母线 专线 变压器 专变 公变 干式 油浸 终端 集中器 电表 通讯模块 表箱 SIM卡 互感器">
+      <div class="theme-header" onclick="toggleCard(this)">
+        <h2><span>🏭</span> 设备资产类 <span class="badge">40+ 指标</span></h2>
+        <span class="toggle">▾</span>
+      </div>
+      <div class="theme-body">
+        <table class="indicator-table">
+          <thead>
+            <tr><th>指标名</th><th>可用维度</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>变电站座数 / 500kV / 220kV / 110kV变电站座数</td>
+              <td><span class="tag dim">供电局名称</span><span class="tag dim">日期</span></td>
+            </tr>
+            <tr>
+              <td>分局线路条数 / 馈线线路数 / 母线线路数 / 其他线路数 / 专线线路数</td>
+              <td><span class="tag dim">供电局名称</span><span class="tag dim">日期</span></td>
+            </tr>
+            <tr>
+              <td>变压器总数 / 专用 / 公用 / 干式 / 油浸 / 专变合用变压器数</td>
+              <td><span class="tag dim">供电局名称</span><span class="tag dim">日期</span></td>
+            </tr>
+            <tr>
+              <td>终端总数 / 厂站终端总数 / 负控终端数 / 配变终端数 / 集中器终端数 / 智慧能源网关终端数</td>
+              <td><span class="tag dim">供电局名称</span><span class="tag dim">日期</span></td>
+            </tr>
+            <tr>
+              <td>电表总数 / 电厂户 / 厂站户 / 专变客户 / 公变用户 / 光伏用户 / 台区考核户 / 工业园区户电表数</td>
+              <td><span class="tag dim">供电局名称</span><span class="tag dim">日期</span></td>
+            </tr>
+            <tr>
+              <td>通讯模块数 / 表箱数 / SIM卡数 / 互感器数</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="examples">
+          <h4>典型问数</h4>
+          <ul>
+            <li>2026年9月20日各供电局的变电站座数、500kV/220kV/110kV变电站座数是多少？</li>
+            <li>2026年9月20日各供电局的变压器总数、专用变压器数、公用变压器数是多少？</li>
+            <li>2026年9月20日各供电局的终端总数、集中器终端数、智慧能源网关终端数是多少？</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 12. 档案校验类 -->
+    <div class="theme-card" data-keywords="档案 校验 自校验 计量档案 采集档案 模块档案 SIM卡档案">
+      <div class="theme-header" onclick="toggleCard(this)">
+        <h2><span>✅</span> 档案校验类 <span class="badge">4 指标</span></h2>
+        <span class="toggle">▾</span>
+      </div>
+      <div class="theme-body">
+        <table class="indicator-table">
+          <thead>
+            <tr><th>指标名</th><th>可用维度</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>计量档案自校验 / 采集档案自校验 / 模块档案校验 / SIM卡档案校验</td>
+              <td><span class="tag dim">日期</span><span class="tag dim">供电局名称</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="examples">
+          <h4>典型问数</h4>
+          <ul>
+            <li>2026年9月20日各供电局的计量档案自校验、采集档案自校验结果是多少？</li>
+            <li>2026年9月20日各供电局的模块档案校验、SIM卡档案校验结果是多少？</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 无结果提示 -->
+  <div class="no-result" id="noResult">没有找到匹配的问数主题，请尝试其他关键词。</div>
+
+  <!-- 维度组合 -->
+  <div class="theme-card" id="comboSection" data-keywords="维度组合 组合维度 日期 供电局 行业 用户类型 终端类型 工单 统计类型">
+    <div class="theme-header" onclick="toggleCard(this)">
+      <h2><span>🔗</span> 常用维度组合 <span class="badge">9 组</span></h2>
+      <span class="toggle">▾</span>
+    </div>
+    <div class="theme-body">
+      <table class="combo-table">
+        <thead>
+          <tr><th>组合维度</th><th>可回答问题示例</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="tag dim">日期</span> + <span class="tag dim">供电局名称</span></td>
+            <td>某日某供电局的日供电量、抄表率、线损率等</td>
+          </tr>
+          <tr>
+            <td><span class="tag dim">日期</span> + <span class="tag dim">市供电局</span> + <span class="tag dim">区供电局</span> + <span class="tag dim">供电分局</span></td>
+            <td>某日某区域的光伏发电量、用户数、负荷等</td>
+          </tr>
+          <tr>
+            <td><span class="tag dim">日期</span> + <span class="tag dim">行业编码</span> + <span class="tag dim">行业名称</span></td>
+            <td>某日某行业的用电量、用电负荷、用电量占比</td>
+          </tr>
+          <tr>
+            <td><span class="tag dim">日期</span> + <span class="tag dim">用户类型</span></td>
+            <td>某日某类用户的自动抄表率、采集完整率</td>
+          </tr>
+          <tr>
+            <td><span class="tag dim">日期</span> + <span class="tag dim">终端类型</span></td>
+            <td>某日某类终端的时钟合格率、停电数、召测失败数</td>
+          </tr>
+          <tr>
+            <td><span class="tag dim">日期</span> + <span class="tag dim">电能表统计类型</span></td>
+            <td>某日某类电能表的统计数量及占比</td>
+          </tr>
+          <tr>
+            <td><span class="tag dim">日期</span> + <span class="tag dim">统计类型</span> + <span class="tag dim">供电局名称</span> + <span class="tag dim">班组名称</span> + <span class="tag dim">部门名称</span> + <span class="tag dim">用户类别</span> + <span class="tag dim">工单类型</span></td>
+            <td>某日某局某班组某部门某类用户某类工单的及时率、完成率</td>
+          </tr>
+          <tr>
+            <td><span class="tag dim">日期</span> + <span class="tag dim">档案类别</span> + <span class="tag dim">供电局名称</span> + <span class="tag dim">数据发布指标统计类型</span></td>
+            <td>某日某局某档案类别的抄见率、拟合率</td>
+          </tr>
+          <tr>
+            <td><span class="tag dim">日期</span> + <span class="tag dim">数据完整率统计类型</span> + <span class="tag dim">主终端标志</span> + <span class="tag dim">现货统计分类</span> + <span class="tag dim">主副表标志</span></td>
+            <td>某日某类现货数据的完整率、应采数、实采数</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer>
+    指标维度问数范围 · 基于《指标维度统计 v01》整理 · 共 12 个业务主题、200+ 指标项、30+ 维度字段
+  </footer>
+
+</div>
+
+<script>
+  // 折叠/展开
+  function toggleCard(header) {
+    const card = header.closest('.theme-card');
+    card.classList.toggle('collapsed');
+  }
+
+  // 搜索过滤
+  const searchInput = document.getElementById('searchInput');
+  const noResult = document.getElementById('noResult');
+  const themeCards = document.querySelectorAll('.theme-card');
+
+  searchInput.addEventListener('input', function () {
+    const keyword = this.value.trim().toLowerCase();
+    let visibleCount = 0;
+
+    themeCards.forEach(card => {
+      const keywords = (card.dataset.keywords || '').toLowerCase();
+      const text = card.innerText.toLowerCase();
+      const match = keyword === '' || keywords.includes(keyword) || text.includes(keyword);
+
+      if (match) {
+        card.style.display = '';
+        visibleCount++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+
+    noResult.style.display = visibleCount === 0 ? 'block' : 'none';
+  });
+
+  // 清空搜索
+  function clearSearch() {
+    searchInput.value = '';
+    searchInput.dispatchEvent(new Event('input'));
+    searchInput.focus();
+  }
+
+  // 默认全部展开
+  window.addEventListener('DOMContentLoaded', () => {
+    // 可根据需要默认折叠部分卡片，此处保持展开
+  });
+</script>
+
+</body>
+</html>
