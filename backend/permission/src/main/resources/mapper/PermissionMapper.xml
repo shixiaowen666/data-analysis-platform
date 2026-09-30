@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.senses.permission.mapper.PermissionMapper">
+    <resultMap type="com.senses.permission.entity.Permission" id="PermissionMap">
+        <result property="id" column="id" jdbcType="BIGINT"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="pid" column="pid" jdbcType="INTEGER"/>
+        <result property="appId" column="app_id" jdbcType="INTEGER"/>
+        <result property="appName" column="app_name" jdbcType="VARCHAR"/>
+        <result property="sign" column="sign" jdbcType="VARCHAR"/>
+        <result property="type" column="type" jdbcType="TINYINT"/>
+        <result property="status" column="status" jdbcType="TINYINT"/>
+        <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+        <result property="createdUser" column="created_user" jdbcType="VARCHAR"/>
+        <result property="modifyTime" column="modify_time" jdbcType="TIMESTAMP"/>
+        <result property="modifyUser" column="modify_user" jdbcType="VARCHAR"/>
+        <result property="selected" column="selected" jdbcType="INTEGER"/>
+        <result property="isChild" column="is_child" jdbcType="INTEGER"/>
+        <result property="menuType" column="menu_type" jdbcType="TINYINT"/>
+        <result property="buttonType" column="button_type" jdbcType="TINYINT"/>
+        <result property="externalUrl" column="external_url" jdbcType="VARCHAR"/>
+        <result property="orderNum" column="order_num" jdbcType="INTEGER"/>
+    </resultMap>
+    <select id="listByPage" resultMap="PermissionMap">
+        select
+        p.*,
+        a.name as app_name,
+        if(p2.cou is null or p2.cou=0,0,1) as is_child
+        FROM
+        permission p
+        join application a on p.app_id = a.id and p.app_id=#{appId}
+        left join
+        (
+            select
+                p1.pid,
+                count(1) as cou
+            FROM
+                permission p1
+            where
+                p1.status!=2
+                <if test="status!=null">
+                    and p1.status!=#{status}
+                </if>
+            group by p1.pid
+        ) p2 on p.id = p2.pid
+        where p.`status`!=2 and p.pid=0
+        <if test="permissionType!=null">
+            and p.type = #{permissionType}
+        </if>
+        <if test="status!=null">
+            and p.status=#{status}
+        </if>
+        <if test="filterVal != null and filterVal!=''">
+            and (p.name like concat('%',#{filterVal},'%')
+                or p.sign like concat('%',#{filterVal},'%')
+            )
+        </if>
+        order by p.created_time desc
+    </select>
+    <select id="count" resultType="long">
+        select
+        count(1)
+        FROM
+        permission p
+        join application a on p.app_id = a.id and p.app_id=#{appId}
+        left join
+        (
+            select
+                p1.pid,
+                count(1) as cou
+            FROM
+                permission p1
+            where
+                p1.status!=2
+                <if test="status!=null">
+                    and p1.status!=#{status}
+                </if>
+            group by p1.pid
+        ) p2 on p.id = p2.pid
+        where p.`status`!=2 and p.pid=0
+        <if test="permissionType!=null">
+            and p.type = #{permissionType}
+        </if>
+        <if test="status!=null">
+            and p.status=#{status}
+        </if>
+        <if test="filterVal != null and filterVal!=''">
+            and (p.name like concat('%',#{filterVal},'%')
+            or p.sign like concat('%',#{filterVal},'%')
+            )
+        </if>
+    </select>
+
+    <select id="listSelectedPageByRoleId" resultMap="PermissionMap">
+        select
+        p.*,
+        if(rp.permission_id is null, 0, 1) as selected
+        FROM
+        permission p
+        left join roles_permission rp on
+                p.id = rp.permission_id and rp.role_id = #{roleId}
+        where p.`status`!=2
+        order by p.created_time desc
+    </select>
+    <select id="countSelectedPageByRoleId" resultType="long">
+        select
+        count(1)
+        FROM
+            permission p
+                left join roles_permission rp on
+                p.id = rp.permission_id and rp.role_id = #{roleId}
+        where p.`status`!=2
+        order by p.created_time desc
+    </select>
+    <select id="trueListByPid" resultMap="PermissionMap">
+        select p.*,a.name as app_name,if(p1.cou is null or p1.cou=0,0,1) as is_child
+
+             from
+             permission p
+             join application a on p.app_id = a.id
+            <if test="roleId!=null">
+                join roles_permission rp on rp.role_id =#{roleId} and p.id = rp.permission_id
+            </if>
+             left join (
+                  select pid,count(1) as cou
+                 from permission
+                 where status =1 group by pid
+            ) p1 on p.id=p1.pid
+             where p.pid = #{pid} and p.status=1
+            order by p.created_time
+    </select>
+    <select id="trueList" resultMap="PermissionMap">
+        select
+        p.*,
+        a.name as app_name
+        FROM
+        permission p
+        join application a on p.app_id = a.id and p.app_id=#{appId}
+        where p.`status`= 1
+        <if test="permissionType!=null">
+            and p.type = #{permissionType}
+        </if>
+        <if test="filterVal != null and filterVal!=''">
+            and (p.name like concat('%',#{filterVal},'%')
+            or p.sign like concat('%',#{filterVal},'%')
+            )
+        </if>
+        order by p.pid desc
+    </select>
+
+    <select id="getRootMenus" resultMap="PermissionMap">
+        select * from (
+                select distinct p.*
+                from
+                    permission p
+                        join roles_permission rp on p.app_id=#{appId} and p.type=0 and p.pid=0 and p.`status`=1 and p.id = rp.role_id
+                        join role r on r.id = rp.role_id and r.`status`=1
+                        join depts_roles dr on dr.role_id = r.id
+                        join user u on u.id = #{userId} and u.dept_id = dr.dept_id
+                union
+                select distinct p.*
+                from
+                    permission p
+                        join roles_permission rp on p.app_id=#{appId} and p.type=0 and p.pid=0 and p.`status`=1 and p.id = rp.role_id
+                        join role r on r.id = rp.role_id and r.`status`=1
+                        join groups_roles gr on gr.role_id = r.id
+                        join groups_users gu on gu.user_id=#{userId} and gr.group_id = gu.group_id
+                union
+                select distinct p.*
+                from
+                permission p
+                    join roles_permission rp on p.app_id=#{appId} and p.type=0 and p.pid=0 and p.`status`=1 and p.id = rp.role_id
+                    join role r on r.id = rp.role_id and r.`status`=1
+                    join users_roles ur on ur.user_id=#{userId} and ur.role_id = r.id
+        )a order by a.id
+    </select>
+
+    <select id="getViewPermissionList" resultMap="PermissionMap">
+        select
+            p.*
+        from
+            permission p
+        join roles_permission rp on p.id = rp.permission_id and p.status = 1 and (p.button_type is null or p.button_type = 2)
+        join(
+            select
+                r.id
+            from
+                role r
+            where r.id in(
+                SELECT
+                    DISTINCT dr.role_id
+                from
+                    depts_roles dr
+                     where dr.dept_id in
+                    <foreach collection="deptIds" item='item' open='(' separator=',' close=')'>
+                        #{item}
+                    </foreach>
+                union
+                SELECT
+                    DISTINCT gr.role_id
+                from
+                    groups_roles gr
+                    join groups_users gu on gr.group_id = gu.group_id and gu.user_id = #{userId}
+                union
+                SELECT
+                    DISTINCT ur.role_id
+                from
+                    users_roles ur
+                where ur.user_id=#{userId}
+            ) and r.status=1 and r.type=1
+        )r on rp.role_id = r.id
+        union
+        select
+            p.*
+        from
+            permission p
+        join(
+            select
+                r.app_id
+            from
+                role r
+            where r.id in(
+                SELECT
+                    DISTINCT dr.role_id
+                from
+                    depts_roles dr
+                     where dr.dept_id in
+                    <foreach collection="deptIds" item='item' open='(' separator=',' close=')'>
+                        #{item}
+                    </foreach>
+                union
+                SELECT
+                    DISTINCT gr.role_id
+                from
+                    groups_roles gr
+                    join groups_users gu on gr.group_id = gu.group_id and gu.user_id = #{userId}
+                union
+                SELECT
+                    DISTINCT ur.role_id
+                from
+                    users_roles ur
+                where ur.user_id=#{userId}
+            ) and r.status=1 and r.type=0
+        )r on p.app_id = r.app_id
+    </select>
+</mapper>

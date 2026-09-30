@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.senses.permission.mapper.TagFieldRelationMapper">
+    <resultMap type="com.senses.permission.entity.TagFieldRelation" id="TagFieldRelationMap">
+        <result property="id" column="id" jdbcType="BIGINT"/>
+        <result property="tagId" column="tag_id" jdbcType="BIGINT"/>
+        <result property="tableId" column="table_id" jdbcType="BIGINT"/>
+        <result property="tableName" column="table_name" jdbcType="VARCHAR"/>
+        <result property="columnName" column="column_name" jdbcType="VARCHAR"/>
+        <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+        <result property="updatedTime" column="updated_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+
+    <select id="selectByDataResourceId" resultMap="TagFieldRelationMap">
+        SELECT tdp.*, t.tag_name as tag_name
+        FROM tag_field_relation tdp
+        LEFT JOIN tags t ON tdp.tag_id = t.id AND t.is_deleted = 0
+        WHERE tdp.data_resource_id = #{dataResourceId}
+    </select>
+
+</mapper>

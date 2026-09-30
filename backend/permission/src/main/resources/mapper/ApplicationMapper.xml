@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.senses.permission.mapper.ApplicationMapper">
+    <resultMap type="com.senses.permission.entity.Application" id="ApplicationMap">
+        <result property="id" column="id" jdbcType="BIGINT"/>
+        <result property="applicationKey" column="application_key" jdbcType="VARCHAR"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="code" column="code" jdbcType="VARCHAR"/>
+        <result property="status" column="status" jdbcType="TINYINT"/>
+        <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+        <result property="createdUser" column="created_user" jdbcType="VARCHAR"/>
+        <result property="modifyUser" column="modify_user" jdbcType="VARCHAR"/>
+        <result property="modifyTime" column="modify_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+    <select id="listByPage" resultMap="ApplicationMap">
+        select
+        *
+        FROM
+        application
+        where `status`!=2
+        <if test="filterVal != null and filterVal!=''">
+            and (`name` like concat('%',#{filterVal},'%')
+                or code like concat('%',#{filterVal},'%')
+            )
+        </if>
+        order by created_time desc
+    </select>
+    <select id="count" resultType="long">
+        select
+        count(1)
+        FROM
+        application
+        where `status`!=2
+        <if test="filterVal != null and filterVal!=''">
+            and (`name` like concat('%',#{filterVal},'%')
+            or code like concat('%',#{filterVal},'%')
+            )
+        </if>
+    </select>
+
+    <select id="selectByDeptId" resultMap="ApplicationMap">
+        select distinct a.*
+        from application a
+        join role r on a.id = r.app_id and a.`status` =1 and r.`status`=1
+        join depts_roles dr on dr.dept_id=#{deptId} and dr.role_id = r.id
+    </select>
+    <select id="selectByGroupId" resultMap="ApplicationMap">
+        select distinct a.*
+        from application a
+        join role r on a.id = r.app_id and a.`status` =1 and r.`status`=1
+        join groups_roles gr on gr.group_id=#{groupId} and gr.role_id = r.id
+
+    </select>
+
+    <select id="selectByUserId" resultMap="ApplicationMap">
+        SELECT
+            a.*
+        from
+            application a
+        where a.id in(
+            select
+                r.app_id
+            from
+                (
+                    SELECT
+                        *
+                    FROM
+                        role r
+                    where r.status =1
+                )r join
+                (
+                    SELECT
+                        DISTINCT dr.role_id
+                    from
+                        depts_roles dr
+                         where dr.dept_id in
+                        <foreach collection="deptIds" item='item' open='(' separator=',' close=')'>
+                            #{item}
+                        </foreach>
+                    union
+                    SELECT
+                        DISTINCT gr.role_id
+                    from
+                        groups_roles gr
+                            join groups_users gu on gr.group_id = gu.group_id and gu.user_id = #{userId}
+                    union
+                    SELECT
+                        DISTINCT ur.role_id
+                    from
+                        users_roles ur
+                    where ur.user_id=#{userId}
+
+                )rid on r.id = rid.role_id
+        )
+    </select>
+
+    <select id="selectAppAdmin" resultType="com.senses.permission.entity.User">
+        <if test="deptIds.size() > 0">
+          select u.*,
+                 dr.role_id
+          FROM `user` u
+            join DEPTS_ROLES dr on u.dept_id = dr.DEPT_ID
+          where u.dept_id in
+          <foreach collection="deptIds" separator="," open="(" close=")" item="item">
+              #{item}
+          </foreach>
+          union
+        </if>
+        select u.*
+        from (
+              select distinct u.*,
+                              gr.role_id
+              FROM `user` u
+                       join groups_users gu on gu.user_id = u.id
+                       join groups_roles gr on gu.group_id = gr.group_id
+              where u.status = 1
+              union
+              select u.*,
+                     ur.role_id
+              FROM `user` u
+                       join users_roles ur on u.id = ur.user_id
+              where u.status = 1
+        ) u
+        join role r on u.role_id = r.id and r.status = 1 and r.type = 0
+        join application app on r.app_id = app.id and app.status = 1 and app.code =#{appCode}
+    </select>
+
+</mapper>

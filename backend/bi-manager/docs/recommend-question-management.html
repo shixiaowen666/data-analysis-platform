@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>推荐问题管理</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f6fa; color: #333; }
+
+  .page { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+  .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+  .page-header h2 { font-size: 20px; font-weight: 600; }
+  .header-actions { display: flex; gap: 12px; }
+
+  .filter-bar { display: flex; gap: 12px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
+  .filter-bar select, .filter-bar input { height: 36px; padding: 0 12px; border: 1px solid #dcdfe6; border-radius: 6px; font-size: 14px; outline: none; background: #fff; }
+  .filter-bar select:focus, .filter-bar input:focus { border-color: #409eff; }
+  .filter-bar input { flex: 1; min-width: 160px; }
+
+  .btn { height: 36px; padding: 0 20px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .btn-primary { background: #409eff; color: #fff; }
+  .btn-primary:hover { background: #337ecc; }
+  .btn-default { background: #fff; color: #606266; border: 1px solid #dcdfe6; }
+  .btn-default:hover { background: #f5f7fa; }
+  .btn-text { background: transparent; color: #409eff; padding: 0 8px; }
+  .btn-text:hover { color: #337ecc; }
+  .btn-text.danger { color: #f56c6c; }
+  .btn-text.danger:hover { color: #e04040; }
+
+  .card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .card-body { padding: 24px; }
+  .empty { text-align: center; padding: 60px 0; color: #999; font-size: 14px; }
+  .empty .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: .3; }
+  .empty p { margin: 4px 0; }
+  .empty .hint { color: #bbb; font-size: 12px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 12px 16px; font-size: 14px; }
+  th { background: #fafafa; color: #666; font-weight: 500; border-bottom: 1px solid #ebeef5; }
+  td { border-bottom: 1px solid #ebeef5; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f5f7fa; }
+  td.question { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .tag { display: inline-block; padding: 2px 10px; background: #ecf5ff; color: #409eff; border-radius: 4px; font-size: 12px; margin: 2px 4px 2px 0; }
+  .tag-none { color: #ccc; font-size: 12px; }
+
+  .status-switch { position: relative; display: inline-block; width: 44px; height: 22px; vertical-align: middle; }
+  .status-switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; inset: 0; background: #ccc; border-radius: 11px; transition: .3s; }
+  .slider::before { content: ''; position: absolute; left: 2px; bottom: 2px; width: 18px; height: 18px; background: #fff; border-radius: 50%; transition: .3s; }
+  .status-switch input:checked + .slider { background: #409eff; }
+  .status-switch input:checked + .slider::before { transform: translateX(22px); }
+  .actions { display: flex; gap: 4px; align-items: center; }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; z-index: 100; }
+  .modal { background: #fff; border-radius: 8px; width: 520px; max-width: 90vw; box-shadow: 0 4px 20px rgba(0,0,0,.12); }
+  .modal-header { padding: 16px 24px; border-bottom: 1px solid #ebeef5; font-size: 16px; font-weight: 600; }
+  .modal-body { padding: 24px; max-height: 60vh; overflow-y: auto; }
+  .modal-footer { padding: 12px 24px; border-top: 1px solid #ebeef5; display: flex; justify-content: flex-end; gap: 12px; }
+  .form-item { margin-bottom: 16px; }
+  .form-item label { display: block; font-size: 14px; color: #606266; margin-bottom: 6px; }
+  .form-item .required::after { content: ' *'; color: #f56c6c; }
+  .form-item input, .form-item textarea { width: 100%; padding: 8px 12px; border: 1px solid #dcdfe6; border-radius: 6px; font-size: 14px; outline: none; font-family: inherit; }
+  .form-item textarea { resize: vertical; min-height: 80px; }
+  .form-item input:focus, .form-item textarea:focus { border-color: #409eff; }
+  .form-item .error { color: #f56c6c; font-size: 12px; margin-top: 4px; }
+  .form-item .hint { color: #999; font-size: 12px; margin-top: 4px; }
+
+  .tag-checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tag-checkbox { display: flex; align-items: center; gap: 6px; padding: 4px 12px; border: 1px solid #dcdfe6; border-radius: 6px; font-size: 13px; cursor: pointer; user-select: none; transition: .2s; }
+  .tag-checkbox:hover { border-color: #409eff; }
+  .tag-checkbox.active { border-color: #409eff; background: #ecf5ff; color: #409eff; }
+  .tag-checkbox input { display: none; }
+
+  .pagination { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 20px; font-size: 13px; color: #666; }
+  .pagination .btn { height: 30px; padding: 0 12px; font-size: 13px; }
+
+  .toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%); padding: 10px 24px; border-radius: 6px; font-size: 14px; color: #fff; z-index: 200; animation: fadeIn .3s ease; }
+  .toast-success { background: #67c23a; }
+  .toast-error { background: #f56c6c; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <div class="page-header">
+    <h2>推荐问题管理</h2>
+    <div class="header-actions">
+    <button class="btn btn-primary" onclick="openCreate()">+ 新建问题</button>
+    </div>
+  </div>
+
+  <!-- 筛选栏 -->
+  <div class="filter-bar">
+    <select id="aiBodyCode">
+      <option value="">选择智能体</option>
+    </select>
+    <input type="text" id="keyword" placeholder="搜索问题内容...">
+    <select id="tagFilter">
+      <option value="">全部标签</option>
+    </select>
+    <button class="btn btn-primary" onclick="loadList()">查询</button>
+  </div>
+
+  <!-- 列表 -->
+  <div class="card">
+    <div class="card-body">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:50px">#</th>
+            <th>问题内容</th>
+            <th>描述</th>
+            <th style="width:140px">标签</th>
+            <th style="width:70px">排序</th>
+            <th style="width:80px">状态</th>
+            <th style="width:160px">操作</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div class="empty" id="empty" style="display:none">
+        <div class="empty-icon">📋</div>
+        <p id="emptyText">暂无推荐问题</p>
+        <p class="hint" id="emptyHint"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 分页 -->
+  <div class="pagination" id="pagination" style="display:none">
+    <span>共 <b id="totalCount">0</b> 条</span>
+    <button class="btn btn-default" onclick="loadList(1)">首页</button>
+    <button class="btn btn-default" id="prevBtn" onclick="loadList(currentPage - 1)">上一页</button>
+    <span>第 <b id="pageNum">1</b> 页</span>
+    <button class="btn btn-default" id="nextBtn" onclick="loadList(currentPage + 1)">下一页</button>
+  </div>
+
+</div>
+
+<!-- 新建/编辑弹窗 -->
+<div class="modal-overlay" id="modal" style="display:none">
+  <div class="modal">
+    <div class="modal-header" id="modalTitle">新建推荐问题</div>
+    <div class="modal-body">
+      <div class="form-item">
+        <label class="required">智能体</label>
+        <select id="formAiBodyCode" style="width:100%;height:36px;padding:0 12px;border:1px solid #dcdfe6;border-radius:6px;font-size:14px;outline:none;">
+          <option value="">请选择智能体</option>
+        </select>
+        <div class="error" id="aiBodyError" style="display:none">请选择智能体</div>
+      </div>
+      <div class="form-item">
+        <label class="required">问题内容</label>
+        <textarea id="formQuestion" maxlength="500" placeholder="请输入推荐问题，例如：今年各品类的销售额是多少？"></textarea>
+        <div class="hint"><span id="charCount">0</span> / 500</div>
+        <div class="error" id="questionError" style="display:none">请输入问题内容</div>
+      </div>
+      <div class="form-item">
+        <label>问题描述</label>
+        <textarea id="formDescription" maxlength="500" placeholder="描述该问题的用途或背景" style="min-height:60px;"></textarea>
+        <div class="hint"><span id="descCount">0</span> / 500</div>
+      </div>
+      <div class="form-item">
+        <label>关联标签</label>
+        <div class="tag-checkbox-group" id="tagCheckboxGroup">
+          <span style="font-size:13px;color:#999">加载中...</span>
+        </div>
+      </div>
+      <div class="form-item">
+        <label>排序</label>
+        <input type="number" id="formSortOrder" value="0" min="0" max="9999">
+        <div class="hint">数值越小越靠前</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="submit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==== TODO: 替换为实际 API =====
+const API_QUESTION = '/api/v1/recommend/question';
+const API_TAG      = '/api/v1/recommend/tag';
+const API_AI_BODY  = '/api/v1/aibody/list';
+
+let editId = null;
+let currentPage = 1;
+let totalPages = 1;
+
+// ========== 模拟数据 ==========
+const mockAiBodies = [
+  { code: 'agent_power', name: '电力分析智能体' }
+];
+const mockTags = [
+  { id: 1, name: '同比环比' },
+  { id: 2, name: '异常诊断' },
+  { id: 3, name: '明细下钻' },
+  { id: 4, name: '趋势预测' },
+  { id: 5, name: '归因分析' }
+];
+const mockQuestions = [
+  { id: 1, aiBodyCode: 'agent_power', question: '请按日展示龙华供电局2026年6月光伏用户最大负荷同比变化趋势', description: '按日维度展示龙华供电局光伏用户最大负荷的同比变化情况', sortOrder: 0, status: 1, tags: [{id:1,name:'同比环比'}], createdAt: '2026-07-20 10:00:00' },
+  { id: 2, aiBodyCode: 'agent_power', question: '找出2026年6月最大负荷异常波动的日期，并分析可能原因', description: '诊断6月最大负荷数据中的异常点并归因', sortOrder: 1, status: 1, tags: [{id:2,name:'异常诊断'}], createdAt: '2026-07-21 14:30:00' },
+  { id: 3, aiBodyCode: 'agent_power', question: '按台区维度拆解龙华供电局6月光伏用户最大负荷贡献排名', description: '从台区角度下钻分析光伏用户最大负荷贡献', sortOrder: 2, status: 1, tags: [{id:3,name:'明细下钻'}], createdAt: '2026-07-22 09:15:00' },
+  { id: 4, aiBodyCode: 'agent_power', question: '预测龙华供电局未来7天光伏用户最大负荷走势，并给出风险提示', description: '基于历史数据预测未来一周负荷趋势并预警', sortOrder: 3, status: 1, tags: [{id:4,name:'趋势预测'}], createdAt: '2026-07-23 11:00:00' },
+  { id: 5, aiBodyCode: 'agent_power', question: '对比龙华、福田、南山供电局6月光伏用户最大负荷差异', description: '横向对比三个供电局的光伏用户负荷表现', sortOrder: 4, status: 1, tags: [{id:1,name:'同比环比'}], createdAt: '2026-07-24 16:00:00' },
+  { id: 6, aiBodyCode: 'agent_power', question: '请从天气、节假日、用户规模变化三个角度解释同比变化原因', description: '多维度归因分析同比变化背后的影响因素', sortOrder: 5, status: 1, tags: [{id:5,name:'归因分析'}], createdAt: '2026-07-25 08:30:00' }
+];
+
+// ========== API 调用（接入后取消注释） ==========
+async function apiListQuestions(page) {
+  const aiBodyCode = document.getElementById('aiBodyCode').value;
+  const keyword = document.getElementById('keyword').value;
+  const tagId = document.getElementById('tagFilter').value;
+  // const res = await fetch(`${API_QUESTION}/page?aiBodyCode=${aiBodyCode}&keyword=${encodeURIComponent(keyword)}&tagId=${tagId}&page=${page || 1}&pageSize=20`).then(r => r.json());
+  // return res.data;
+
+  let list = mockQuestions.filter(q => q.aiBodyCode === aiBodyCode);
+  if (keyword) list = list.filter(q => q.question.includes(keyword));
+  if (tagId) list = list.filter(q => mockQuestionTagMap[q.id] && mockQuestionTagMap[q.id].includes(parseInt(tagId)));
+  return { list, total: list.length, page: 1, pageSize: list.length };
+}
+
+async function apiListAiBodies() {
+  // const res = await fetch(`${API_AI_BODY}?page=1&pageSize=1000`).then(r => r.json());
+  // return res.data.list;
+  return mockAiBodies;
+}
+
+async function apiListTags() {
+  // const res = await fetch(`${API_TAG}/list`).then(r => r.json());
+  // return res.data;
+  return mockTags;
+}
+
+// mock: 问题-标签关联
+const mockQuestionTagMap = { 1: [1], 2: [2], 3: [3], 4: [4], 5: [1], 6: [5] };
+
+async function apiSave(dto) {
+  // const res = await fetch(`${API_QUESTION}/save`, {
+  //   method: 'POST',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify(dto)
+  // }).then(r => r.json());
+  // if (res.code !== 200) throw new Error(res.message);
+  return { code: 200 };
+}
+
+async function apiSwitchStatus(id, status) {
+  // const res = await fetch(`${API_QUESTION}/status?id=${id}&status=${status}`, { method: 'POST' }).then(r => r.json());
+  // if (res.code !== 200) throw new Error(res.message);
+  return { code: 200 };
+}
+
+async function apiDelete(id) {
+  // const res = await fetch(`${API_QUESTION}/del/${id}`).then(r => r.json());
+  // if (res.code !== 200) throw new Error(res.message);
+  return { code: 200 };
+}
+
+// ========== 页面逻辑 ==========
+async function initFilters() {
+  const aiBodies = await apiListAiBodies();
+  const aiSelect = document.getElementById('aiBodyCode');
+  aiBodies.forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a.code;
+    opt.textContent = a.name;
+    aiSelect.appendChild(opt);
+  });
+  // 表单中的智能体下拉也用同样的数据
+  const formSelect = document.getElementById('formAiBodyCode');
+  aiBodies.forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a.code;
+    opt.textContent = a.name;
+    formSelect.appendChild(opt);
+  });
+
+  const tags = await apiListTags();
+  const tagSelect = document.getElementById('tagFilter');
+  tags.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.id;
+    opt.textContent = t.name;
+    tagSelect.appendChild(opt);
+  });
+
+  // 初始化标签复选框
+  renderTagCheckboxes(tags);
+}
+
+function renderTagCheckboxes(tags, selectedIds) {
+  const group = document.getElementById('tagCheckboxGroup');
+  group.innerHTML = tags.map(t => {
+    const active = selectedIds && selectedIds.includes(t.id) ? ' active' : '';
+    return `<label class="tag-checkbox${active}" data-tag-id="${t.id}">
+      <input type="checkbox" ${selectedIds && selectedIds.includes(t.id) ? 'checked' : ''}>
+      ${t.name}
+    </label>`;
+  }).join('');
+
+  group.querySelectorAll('.tag-checkbox').forEach(el => {
+    el.addEventListener('click', () => {
+      const cb = el.querySelector('input');
+      cb.checked = !cb.checked;
+      el.classList.toggle('active', cb.checked);
+    });
+  });
+}
+
+function getSelectedTagIds() {
+  const ids = [];
+  document.querySelectorAll('#tagCheckboxGroup .tag-checkbox.active').forEach(el => {
+    ids.push(parseInt(el.dataset.tagId));
+  });
+  return ids;
+}
+
+async function loadList(page) {
+  currentPage = page || 1;
+  const aiBodyCode = document.getElementById('aiBodyCode').value;
+  if (!aiBodyCode) {
+    showEmpty('请选择智能体后查询', true);
+    return;
+  }
+
+  const data = await apiListQuestions(currentPage);
+  totalPages = Math.ceil(data.total / data.pageSize) || 1;
+
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('empty');
+  const pagination = document.getElementById('pagination');
+
+  if (!data.list || data.list.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = '';
+    document.getElementById('emptyText').textContent = '暂无推荐问题';
+    document.getElementById('emptyHint').textContent = '点击「新建问题」为当前智能体添加推荐问题';
+    pagination.style.display = 'none';
+  } else {
+    empty.style.display = 'none';
+    pagination.style.display = '';
+    document.getElementById('totalCount').textContent = data.total;
+    document.getElementById('pageNum').textContent = currentPage;
+    document.getElementById('prevBtn').disabled = currentPage <= 1;
+    document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+
+    tbody.innerHTML = data.list.map((q, idx) => `
+      <tr>
+        <td>${(currentPage - 1) * 20 + idx + 1}</td>
+        <td class="question" title="${escapeHtml(q.question)}">${escapeHtml(q.question)}</td>
+        <td class="desc" title="${escapeHtml(q.description || '')}" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#999">${escapeHtml(q.description || '-')}</td>
+        <td class="tags">
+          ${q.tags && q.tags.length > 0
+            ? q.tags.map(t => `<span class="tag">${escapeHtml(t.name)}</span>`).join('')
+            : '<span class="tag-none">无</span>'}
+        </td>
+        <td>${q.sortOrder}</td>
+        <td>
+          <label class="status-switch" onclick="event.stopPropagation()">
+            <input type="checkbox" ${q.status === 1 ? 'checked' : ''} onchange="toggleStatus(${q.id}, this.checked)">
+            <span class="slider"></span>
+          </label>
+        </td>
+        <td class="actions">
+          <button class="btn btn-text" onclick="openEdit(${q.id})">编辑</button>
+          <button class="btn btn-text danger" onclick="del(${q.id}, '${escapeHtml(q.question)}')">删除</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+}
+
+function showEmpty(msg, isHint) {
+  document.getElementById('tableBody').innerHTML = '';
+  document.getElementById('empty').style.display = '';
+  document.getElementById('pagination').style.display = 'none';
+  document.getElementById('emptyText').textContent = isHint ? msg : '暂无推荐问题';
+  document.getElementById('emptyHint').textContent = isHint ? '请在上方选择一个智能体' : '';
+}
+
+async function openCreate() {
+  editId = null;
+  document.getElementById('modalTitle').textContent = '新建推荐问题';
+  document.getElementById('formQuestion').value = '';
+  document.getElementById('formDescription').value = '';
+  document.getElementById('formSortOrder').value = '0';
+  document.getElementById('charCount').textContent = '0';
+  document.getElementById('descCount').textContent = '0';
+  hideErrors();
+  const tags = await apiListTags();
+  renderTagCheckboxes(tags, []);
+  showModal();
+}
+
+async function openEdit(id) {
+  editId = id;
+  document.getElementById('modalTitle').textContent = '编辑推荐问题';
+  hideErrors();
+
+  // 获取当前问题的详情
+  const data = await apiListQuestions(1);
+  const q = data.list.find(item => item.id === id);
+  if (!q) return;
+
+  document.getElementById('formAiBodyCode').value = q.aiBodyCode;
+  document.getElementById('formQuestion').value = q.question;
+  document.getElementById('formDescription').value = q.description || '';
+  document.getElementById('formSortOrder').value = q.sortOrder;
+  document.getElementById('charCount').textContent = q.question.length;
+  document.getElementById('descCount').textContent = (q.description || '').length;
+
+  const tags = await apiListTags();
+  const selectedIds = mockQuestionTagMap[id] || [];
+  renderTagCheckboxes(tags, selectedIds);
+  showModal();
+}
+
+function showModal() { document.getElementById('modal').style.display = ''; }
+function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+function hideErrors() {
+  document.getElementById('aiBodyError').style.display = 'none';
+  document.getElementById('questionError').style.display = 'none';
+}
+
+async function submit() {
+  let valid = true;
+  const aiBodyCode = document.getElementById('formAiBodyCode').value;
+  const question = document.getElementById('formQuestion').value.trim();
+
+  if (!aiBodyCode) {
+    document.getElementById('aiBodyError').style.display = '';
+    valid = false;
+  }
+  if (!question) {
+    document.getElementById('questionError').style.display = '';
+    valid = false;
+  }
+  if (!valid) return;
+
+  const dto = {
+    id: editId,
+    aiBodyCode,
+    question,
+    description: document.getElementById('formDescription').value.trim(),
+    sortOrder: parseInt(document.getElementById('formSortOrder').value) || 0,
+    tagIds: getSelectedTagIds()
+  };
+
+  try {
+    await apiSave(dto);
+    toast(editId ? '编辑成功' : '新建成功', 'success');
+    closeModal();
+    loadList(currentPage);
+  } catch (e) {
+    toast(e.message || '保存失败', 'error');
+  }
+}
+
+async function toggleStatus(id, enabled) {
+  try {
+    await apiSwitchStatus(id, enabled ? 1 : 0);
+    toast(enabled ? '已启用' : '已禁用', 'success');
+  } catch (e) {
+    toast('操作失败', 'error');
+    loadList(currentPage);
+  }
+}
+
+async function del(id, question) {
+  if (!confirm(`确定删除推荐问题「${question}」吗？`)) return;
+  try {
+    await apiDelete(id);
+    toast('删除成功', 'success');
+    loadList(currentPage);
+  } catch (e) {
+    toast(e.message || '删除失败', 'error');
+  }
+}
+
+function toast(msg, type) {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2500);
+}
+
+function escapeHtml(s) { return s.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+
+// 字数统计
+document.addEventListener('DOMContentLoaded', () => {
+  const ta = document.getElementById('formQuestion');
+  const td = document.getElementById('formDescription');
+  if (ta) {
+    ta.addEventListener('input', () => {
+      document.getElementById('charCount').textContent = ta.value.length;
+    });
+  }
+  if (td) {
+    td.addEventListener('input', () => {
+      document.getElementById('descCount').textContent = td.value.length;
+    });
+  }
+});
+
+// ========== 启动 ==========
+initFilters();
+</script>
+</body>
+</html>

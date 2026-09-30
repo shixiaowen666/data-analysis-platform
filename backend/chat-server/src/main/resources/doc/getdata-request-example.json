@@ -1,0 +1,33 @@
+{
+  "dimList": [
+    {"id": 90, "dimKey": "ptdate", "dimName": "日期"},
+    {"id": 2383, "dimKey": "institution", "dimName": "分行机构"}
+  ],
+  "indexList": [
+    {"id": 145, "indKey": "deposit_balance", "indName": "存款余额"}
+  ],
+  "timeRange": {"start": "2026-03-02", "end": "2026-07-29"},
+  "filters": [
+    {
+      "filterField": {"fieldClazz": 0, "key": "institution", "name": "分行机构"},
+      "operator": 2,
+      "filterValue": "北京分行"
+    },
+    {
+      "filterField": {"fieldClazz": 1, "key": "deposit_balance", "value": "存款余额"},
+      "operator": 0,
+      "filterValue": "1000"
+    }
+  ],
+  "orderList": [
+    {"id": 145, "key": "deposit_balance", "name": "存款余额", "order": "desc"}
+  ],
+  "top": {
+    "groupDims": [{"id": 90}],
+    "orders": [{"id": 145, "key": "deposit_balance", "name": "存款余额", "order": "desc"}],
+    "topNum": 10
+  },
+  "chartType": 1,
+  "pageNo": 1,
+  "pageSize": 20
+}

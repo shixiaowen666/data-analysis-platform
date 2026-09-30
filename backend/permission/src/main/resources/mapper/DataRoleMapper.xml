@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.senses.permission.mapper.DataRoleMapper">
+    <resultMap type="com.senses.permission.entity.DataRole" id="DataRoleMap">
+        <result property="id" column="id" jdbcType="BIGINT"/>
+        <result property="deptId" column="dept_id" jdbcType="BIGINT"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="remark" column="remark" jdbcType="VARCHAR"/>
+        <result property="status" column="status" jdbcType="TINYINT"/>
+        <result property="approveStatus" column="approve_status" jdbcType="TINYINT"/>
+        <result property="dataRoleType" column="data_role_type" jdbcType="TINYINT"/>
+        <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+        <result property="createdUser" column="created_user" jdbcType="VARCHAR"/>
+        <result property="modifyUser" column="modify_user" jdbcType="VARCHAR"/>
+        <result property="modifyTime" column="modify_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+    <resultMap type="com.senses.permission.entity.User" id="UserMap">
+        <result property="id" column="id" jdbcType="BIGINT"/>
+        <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+        <result property="email" column="email" jdbcType="VARCHAR"/>
+        <result property="enabled" column="enabled" jdbcType="BIGINT"/>
+        <result property="password" column="password" jdbcType="VARCHAR"/>
+        <result property="username" column="username" jdbcType="VARCHAR"/>
+        <result property="lastPasswordResetTime" column="last_password_reset_time" jdbcType="TIMESTAMP"/>
+        <result property="phone" column="phone" jdbcType="VARCHAR"/>
+        <result property="deptId" column="dept_id" jdbcType="BIGINT"/>
+        <result property="deptName" column="dept_name" jdbcType="VARCHAR"/>
+        <result property="isAdmin" column="is_admin" jdbcType="TINYINT"/>
+        <result property="status" column="status" jdbcType="TINYINT"/>
+        <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+        <result property="createdUser" column="created_user" jdbcType="VARCHAR"/>
+        <result property="modifyUser" column="modify_user" jdbcType="VARCHAR"/>
+        <result property="modifyTime" column="modify_time" jdbcType="TIMESTAMP"/>
+        <result property="bindType" column="bind_type" jdbcType="TINYINT"/>
+        <result property="bindTarget" column="bind_target" jdbcType="VARCHAR"/>
+    </resultMap>
+    <resultMap type="com.senses.permission.entity.DataRolesPermission" id="DataRolesPermissionMap">
+        <result property="id" column="id" jdbcType="BIGINT"/>
+        <result property="dataRoleId" column="data_role_id" jdbcType="BIGINT"/>
+        <result property="engineId" column="engine_id" jdbcType="BIGINT"/>
+        <result property="engine" column="engine" jdbcType="VARCHAR"/>
+        <result property="datasourceId" column="datasource_id" jdbcType="BIGINT"/>
+        <result property="tableName" column="table_name" jdbcType="VARCHAR"/>
+        <result property="columnName" column="column_name" jdbcType="VARCHAR"/>
+        <result property="action" column="action" jdbcType="TINYINT"/>
+        <result property="datasourceName" column="datasource_name" jdbcType="VARCHAR"/>
+        <result property="databaseName" column="database_name" jdbcType="VARCHAR"/>
+        <result property="status" column="status" jdbcType="VARCHAR"/>
+        <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+        <result property="createdUser" column="created_user" jdbcType="VARCHAR"/>
+        <result property="modifyTime" column="modify_time" jdbcType="TIMESTAMP"/>
+        <result property="modifyUser" column="modify_user" jdbcType="VARCHAR"/>
+        <result property="deadlineTime" column="deadline_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+    <select id="getBindUserListByPage" resultMap="UserMap">
+        SELECT
+        *
+        from
+        (
+        SELECT
+        u.*,
+        0 as bind_type,
+        u.username as bind_target,
+        d.name as dept_name
+        FROM
+        data_role r
+        join users_data_roles ur on r.data_role_type = 0 and ur.data_role_id=#{id} and ur.data_role_id = r.id
+        join `user` u on ur.user_id = u.id and u.`status`=1
+        join dept d on u.dept_id = d.id
+        where 1=1
+        <if test="filterVal!='' and filterVal!=null">
+            and (u.name like concat('%',#{filterVal},'%')
+            or u.username like concat('%',#{filterVal},'%')
+            or d.name like concat('%',#{filterVal},'%'))
+        </if>
+        union ALL
+        SELECT
+        u.*,
+        1 as bind_type,
+        d.name as bind_target,
+        d.name as dept_name
+        FROM
+        depts_data_roles dr
+        join dept d on dr.data_role_id=#{id} and dr.dept_id=d.id
+        join `user` u on u.dept_id = d.id and u.`status`=1
+        where 1=1
+        <if test="filterVal!='' and filterVal!=null">
+            and (u.name like concat('%',#{filterVal},'%')
+            or u.username like concat('%',#{filterVal},'%')
+            or d.name like concat('%',#{filterVal},'%'))
+        </if>
+        union ALL
+        SELECT
+        u.*,
+        2 as bind_type,
+        g.group_name as bind_target,
+        d.name as dept_name
+        from
+        groups_data_roles gr
+        join `group` g on gr.data_role_id=#{id} and gr.group_id=g.id
+        join groups_users gu on g.id = gu.group_id
+        join `user` u on gu.user_id = u.id
+        join dept d on u.dept_id = d.id
+        where 1=1
+        <if test="filterVal!='' and filterVal!=null">
+            and (u.name like concat('%',#{filterVal},'%')
+            or u.username like concat('%',#{filterVal},'%')
+            or d.name like concat('%',#{filterVal},'%'))
+        </if>
+        )a
+        order by a.created_time desc
+    </select>
+    <select id="countBindUserListByPage" resultType="long">
+        SELECT
+        count(1)
+        from
+        (
+            SELECT
+                u.*,
+                0 as bind_type,
+                u.username as bind_target,
+                d.name as dept_name
+            FROM
+                data_role r
+                    join users_data_roles ur on  r.data_role_type = 0 and ur.data_role_id=#{id} and ur.data_role_id = r.id
+                    join `user` u on ur.user_id = u.id and u.`status`=1
+                    join dept d on u.dept_id = d.id
+                where 1=1
+                <if test="filterVal!='' and filterVal!=null">
+                    and (u.name like concat('%',#{filterVal},'%')
+                    or u.username like concat('%',#{filterVal},'%')
+                    or d.name like concat('%',#{filterVal},'%'))
+                </if>
+            union ALL
+            SELECT
+                u.*,
+                1 as bind_type,
+                d.name as bind_target,
+                d.name as dept_name
+            FROM
+                depts_data_roles dr
+                    join dept d on dr.data_role_id=#{id} and dr.dept_id=d.id
+                    join `user` u on u.dept_id = d.id and u.`status`=1
+            where 1=1
+            <if test="filterVal!='' and filterVal!=null">
+                and (u.name like concat('%',#{filterVal},'%')
+                or u.username like concat('%',#{filterVal},'%')
+                or d.name like concat('%',#{filterVal},'%'))
+            </if>
+            union ALL
+            SELECT
+                u.*,
+                2 as bind_type,
+                g.group_name as bind_target,
+                d.name as dept_name
+            from
+                groups_data_roles gr
+                    join `group` g on gr.data_role_id=#{id} and gr.group_id=g.id
+                    join groups_users gu on g.id = gu.group_id
+                    join `user` u on gu.user_id = u.id
+                    join dept d on u.dept_id = d.id
+            where 1=1
+            <if test="filterVal!='' and filterVal!=null">
+                and (u.name like concat('%',#{filterVal},'%')
+                or u.username like concat('%',#{filterVal},'%')
+                or d.name like concat('%',#{filterVal},'%'))
+            </if>
+        )a
+    </select>
+
+    <select id="listByPage" resultMap="DataRoleMap">
+        select *
+        from data_role
+        <if test="keyWords!='' and keyWords!=null">
+            where id like concat('%',#{keyWords},'%')
+            or created_user like concat('%',#{keyWords},'%')
+            or name like concat('%',#{keyWords},'%')
+        </if>
+    </select>
+    <select id="count" resultType="long">
+        select count(1)
+        from data_role
+        <if test="keyWords!='' and keyWords!=null">
+            where id like concat('%',#{keyWords},'%')
+            or created_user like concat('%',#{keyWords},'%')
+            or name like concat('%',#{keyWords},'%')
+        </if>
+    </select>
+
+    <select id="getDataPermissionListByPage" resultMap="DataRolesPermissionMap">
+        select *
+        from data_roles_permission
+        where data_role_id=#{dataRoleId}
+        <if test="keyWords!='' and keyWords!=null">
+            and database_name like concat('%',#{keyWords},'%')
+            or table_name like concat('%',#{keyWords},'%')
+        </if>
+    </select>
+    <select id="countDataPermissionList" resultType="long">
+        select count(1)
+        from data_roles_permission
+        where data_role_id=#{dataRoleId}
+        <if test="keyWords!='' and keyWords!=null">
+            and database_name like concat('%',#{keyWords},'%')
+            or table_name like concat('%',#{keyWords},'%')
+        </if>
+    </select>
+
+
+
+    <select id="treeList" resultMap="DataRoleMap">
+        select
+        r.*,
+        d.id as dept_id
+        FROM
+        data_role r
+        join depts_data_roles dr on r.id = dr.data_role_id
+        join dept d on dr.dept_id = d.id and d.status = 1
+        where r.`status`= #{status}
+        <if test="deptId != null">
+            and d.id = #{deptId}
+        </if>
+        <if test="filterVal != null and filterVal!=''">
+            and (r.name like concat('%',#{filterVal},'%')
+                or r.created_user like concat('%',#{filterVal},'%')
+            <if test="orId != null">
+                or r.id = #{orId}
+            </if>
+            )
+        </if>
+        order by r.created_time desc
+    </select>
+    <select id="selectByDeptId" resultMap="DataRoleMap">
+        select
+        dr.id,
+        dr.name,
+        dr.remark,
+        dr.`status`,
+        dr.created_time,
+        dr.created_user,
+        dr.modify_user,
+        dr.modify_time,
+        ddr.dept_id
+        from
+        depts_data_roles ddr
+        join data_role dr on dr.data_role_type = 0 and ddr.data_role_id = dr.id
+        where ddr.dept_id = #{deptId}
+    </select>
+    <select id="selectByGroupId" resultMap="DataRoleMap">
+        select
+        dr.*
+        from
+        groups_data_roles gr
+        join data_role dr on dr.data_role_type = 0 and gr.group_id=#{groupId} and dr.status = 1 and gr.data_role_id = dr.id
+    </select>
+    <select id="getDataRoleById" resultMap="DataRoleMap">
+        select
+        dr.*,
+        ar.approve_status
+        from
+        (
+            select
+                dr.*
+            from
+                data_role dr
+            where dr.id = #{id}
+        )dr left join(
+            select
+            approve_target_id,
+            approve_status
+            from
+            approve_record
+            where id=
+            (
+                select
+                    max(id) as id
+                from
+                    approve_record ar
+                where ar.flow_tag = 'upcDataRole'
+                and approve_target_id = #{id}
+            )
+        )ar on dr.id = ar.approve_target_id
+    </select>
+</mapper>

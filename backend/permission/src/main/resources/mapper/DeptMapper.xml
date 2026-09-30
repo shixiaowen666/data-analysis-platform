@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.senses.permission.mapper.DeptMapper">
+    <resultMap type="com.senses.permission.entity.Dept" id="DeptMap">
+        <result property="id" column="id" jdbcType="BIGINT"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="code" column="code" jdbcType="VARCHAR"/>
+        <result property="pid" column="pid" jdbcType="BIGINT"/>
+        <result property="status" column="status" jdbcType="TINYINT"/>
+        <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+        <result property="createdUser" column="created_user" jdbcType="VARCHAR"/>
+        <result property="modifyTime" column="modify_time" jdbcType="TIMESTAMP"/>
+        <result property="modifyUser" column="modify_user" jdbcType="VARCHAR"/>
+    </resultMap>
+    <select id="selectByGroupId" resultMap="DeptMap">
+        select d.*
+        from dept d
+        join
+        (
+            select distinct dr.dept_id
+            from groups_data_roles gr
+                     join data_role dr on gr.group_id = #{groupId} and dr.status = 1 and gr.data_role_id = dr.id
+        )dr on dr.dept_id = d.id
+    </select>
+
+    <select id="selectAdminPermissionDeptByAppCode" resultMap="DeptMap">
+        select d.*
+        from dept d
+        join depts_roles dr on d.id = dr.dept_id and d.status =1
+        join role r on dr.role_id = r.id and r.status =1 and r.type = 0
+        join application a on r.app_id = a.id and a.code =#{appCode}
+    </select>
+    <select id="selectRelatedDeptIds" resultType="java.lang.Long">
+        WITH RECURSIVE cte_dept (id) AS (
+
+        SELECT DISTINCT d.id
+        FROM dept d
+        INNER JOIN user u ON d.id = u.dept_id
+        <where>
+
+            <if test="userIds != null and userIds.size() > 0">
+                u.id IN
+                <foreach collection="userIds" item="userId" open="(" separator="," close=")">
+                    #{userId}
+                </foreach>
+            </if>
+        </where>
+        UNION ALL
+        <!-- 递归查询：父级部门（排除顶级部门）-->
+        SELECT d.id
+        FROM dept d
+        INNER JOIN cte_dept c ON d.pid = c.id
+        WHERE d.pid IS NOT NULL
+        )
+        SELECT DISTINCT id AS dept_id
+        FROM cte_dept
+    </select>
+</mapper>

@@ -1,0 +1,30 @@
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+.idea/
+*.iml
+*.iws
+*.ipr
+*.swp
+*~
+.vscode/
+
+# ---- build output ----
+target/
+*/target/
+**/target/
+*.class
+*.jar
+*.war
+*.log
+
+# ---- local env / secrets ----
+*.env
+.env
+application-local.yml
+application-local.properties
+application-dev.yml
+application-prod.yml
+
+# ---- AI / tool local cache ----
+.claude/

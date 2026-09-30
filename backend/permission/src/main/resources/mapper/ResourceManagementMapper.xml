@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.senses.permission.mapper.ResourceManagementMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.senses.permission.entity.ResourceManagement">
+        <id column="id" property="id" />
+        <result column="resource_type" property="resourceType" />
+        <result column="object_id" property="objectId" />
+        <result column="object_name" property="objectName" />
+        <result column="application_code" property="applicationCode" />
+        <result column="authorized_object_type" property="authorizedObjectType" />
+        <result column="authorized_object_id" property="authorizedObjectId" />
+        <result column="auth_level" property="authLevel" />
+        <result column="auth_download" property="authDownload" />
+        <result column="authorize_user_id" property="authorizeUserId" />
+        <result column="auth_time" property="authTime" />
+        <result column="modify_time" property="modifyTime" />
+        <result column="modify_user_id" property="modifyUserId" />
+        <result column="online_status" property="onlineStatus" />
+        <result column="dept_name" property="deptName" />
+
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, resource_type, object_id, object_name, application_id, authorized_object_type, authorized_object_id, auth_level, auth_download, authorize_user_id, auth_time, modify_time, modify_user_id, online_status
+    </sql>
+    <select id="listByPage" resultType="com.senses.permission.entity.ResourceManagement">
+        select resource_management.*,dept.name as dept_name,dept.id as dept_id
+        ,ouser.username authorizedObjectName,ouser.name authorizedObjectNameCn
+        ,muser.username as modifyUserName,muser.name as modifyUserNameCn
+        ,euser.username as authorizeUserName,euser.name as authorizeNameCn
+
+        from resource_management
+        left join user ouser on resource_management.authorized_object_id=ouser.id
+        left join user muser on resource_management.modify_user_id= muser.id
+        left join user euser on resource_management.authorize_user_id= euser.id
+        left join dept on ouser.dept_id= dept.id
+        <where>
+            resource_management.authorized_object_type=1
+            <if test="param.resourceTypeList!=null and param.resourceTypeList.size()!=0">
+                and resource_management.resource_type in
+                <foreach collection="param.resourceTypeList" item='item' open='(' separator=',' close=')'>
+                    #{item}
+                </foreach>
+            </if>
+            <if test="param.keywords!=null and param.keywords != ''">
+                and resource_management.object_name like concat('%',#{param.keywords},'%')
+            </if>
+            <if test="param.applicationCode!=null and param.applicationCode != ''">
+                and resource_management.application_code=#{param.applicationCode}
+            </if>
+            <if test="param.authorizedUserIdList!=null and param.authorizedUserIdList.size()!=0">
+                and resource_management.authorized_object_id in
+                <foreach collection="param.authorizedUserIdList" item='item' open='(' separator=',' close=')'>
+                    #{item}
+                </foreach>
+            </if>
+            <if test="param.belongDeptIdList!=null and param.belongDeptIdList.size()!=0">
+                and dept.id in
+                <foreach collection="param.belongDeptIdList" item='item' open='(' separator=',' close=')'>
+                    #{item}
+                </foreach>
+            </if>
+            <if test="param.authDownloadList!=null and param.authDownloadList.size()!=0">
+                and resource_management.auth_download in
+                <foreach collection="param.authDownloadList" item='item' open='(' separator=',' close=')'>
+                    #{item}
+                </foreach>
+            </if>
+            <if test="param.authorizerIdList!=null and param.authorizerIdList.size()!=0">
+                and resource_management.authorize_user_id in
+                <foreach collection="param.authorizerIdList" item='item' open='(' separator=',' close=')'>
+                    #{item}
+                </foreach>
+            </if>
+            <if test="param.authTimeBegin!=null and param.authTimeBegin != ''
+            and param.authTimeEnd!=null and param.authTimeEnd != '' ">
+                and resource_management.auth_time BETWEEN #{param.authTimeBegin} and  #{param.authTimeEnd}
+            </if>
+            <if test="param.modifyTimeBegin!=null and param.modifyTimeBegin != ''
+            and param.modifyTimeEnd!=null and param.modifyTimeEnd != '' ">
+                and resource_management.modify_time BETWEEN  #{param.modifyTimeBegin} and #{param.modifyTimeEnd}
+            </if>
+
+            <if test="param.modifierIdList!=null and param.modifierIdList.size()!=0">
+                and resource_management.modify_user_id in
+                <foreach collection="param.modifierIdList" item='item' open='(' separator=',' close=')'>
+                    #{item}
+                </foreach>
+            </if>
+            <if test="param.onlineStatus!=null ">
+                and resource_management.online_status =#{param.onlineStatus}
+            </if>
+        </where>
+    </select>
+
+<!--    <select id="listAll" resultType="com.senses.permission.entity.ResourceManagement">-->
+<!--        select resource_management.*,dept.name as dept_name,dept.id as dept_id-->
+<!--        ,ouser.username authorizedObjectName,ouser.name authorizedObjectNameCn-->
+<!--        ,muser.username as modifyUserName,muser.name as modifyUserNameCn-->
+<!--        ,euser.username as authorizeUserName,euser.name as authorizeNameCn-->
+
+<!--        from resource_management-->
+<!--        left join user ouser on resource_management.authorized_object_id=ouser.id-->
+<!--        left join user muser on resource_management.modify_user_id= muser.id-->
+<!--        left join user euser on resource_management.authorize_user_id= euser.id-->
+<!--        left join dept on ouser.dept_id= dept.id-->
+<!--        <where>-->
+<!--            resource_management.online_status =1-->
+<!--            <if test="param.resourceType!=null and param.resourceType != ''">-->
+<!--                and resource_management.resource_type =#{param.resourceType}-->
+<!--            </if>-->
+<!--            <if test="param.applicationCode!=null and param.applicationCode != ''">-->
+<!--                and resource_management.application_code=#{param.applicationCode}-->
+<!--            </if>-->
+<!--            <if test="param.authorizedUserId!=null and param.authorizedUserId!=0">-->
+<!--                and resource_management.authorized_object_id= #{param.authorizedUserId}-->
+<!--            </if>-->
+<!--            <if test="param.authorizedObjectType!=null and param.authorizedObjectType!=0">-->
+<!--                and resource_management.authorized_object_type= #{param.authorizedObjectType}-->
+<!--            </if>-->
+
+<!--            <if test="param.authLevelList!=null and param.authLevelList.size()!=0">-->
+<!--                and resource_management.auth_level in-->
+<!--                <foreach collection="param.authLevelList" item='item' open='(' separator=',' close=')'>-->
+<!--                    #{item}-->
+<!--                </foreach>-->
+<!--            </if>-->
+<!--            <if test="param.authDownloadList!=null and param.authDownloadList.size()!=0">-->
+<!--                and resource_management.auth_download in-->
+<!--                <foreach collection="param.authDownloadList" item='item' open='(' separator=',' close=')'>-->
+<!--                    #{item}-->
+<!--                </foreach>-->
+<!--            </if>-->
+<!--        </where>-->
+<!--    </select>-->
+
+    <select id="listAll" resultType="com.senses.permission.entity.ResourceManagement">
+        select resource_management.*,
+        ouser.username authorizedObjectName
+        from resource_management
+        left join user ouser on resource_management.authorized_object_id=ouser.id
+        <where>
+            resource_management.online_status =1
+            <if test="param.objectId!=null">
+                and resource_management.object_id =#{param.objectId}
+            </if>
+            <if test="param.resourceType!=null">
+                and resource_management.resource_type =#{param.resourceType}
+            </if>
+            <if test="param.applicationCode!=null and param.applicationCode != ''">
+                and resource_management.application_code=#{param.applicationCode}
+            </if>
+            <if test="param.authorizedUserId!=null and param.authorizedUserId!=0">
+                and resource_management.authorized_object_id= #{param.authorizedUserId}
+            </if>
+            <if test="param.authorizedObjectType!=null and param.authorizedObjectType!=0">
+                and resource_management.authorized_object_type= #{param.authorizedObjectType}
+            </if>
+
+<!--            <if test="param.authLevelList!=null and param.authLevelList.size()!=0">-->
+<!--                and resource_management.auth_level in-->
+<!--                <foreach collection="param.authLevelList" item='item' open='(' separator=',' close=')'>-->
+<!--                    #{item}-->
+<!--                </foreach>-->
+<!--            </if>-->
+            <if test="param.authDownloadList!=null and param.authDownloadList.size()!=0">
+                and resource_management.auth_download in
+                <foreach collection="param.authDownloadList" item='item' open='(' separator=',' close=')'>
+                    #{item}
+                </foreach>
+            </if>
+        </where>
+    </select>
+    <select id="listGroupByPage" resultType="com.senses.permission.entity.ResourceManagement">
+        select resource_management.*
+        ,ogroup.group_name authorizedUserGroupName
+        ,muser.username as modifyUserName,muser.name as modifyUserNameCn
+        ,euser.username as authorizeUserName,euser.name as authorizeNameCn
+
+        from resource_management
+        left join `group` ogroup on resource_management.authorized_object_id=ogroup.id
+        left join user muser on resource_management.modify_user_id= muser.id
+        left join user euser on resource_management.authorize_user_id= euser.id
+        <where>
+            resource_management.authorized_object_type=2
+            <if test="param.resourceTypeList!=null and param.resourceTypeList.size()!=0">
+                and resource_management.resource_type in
+                <foreach collection="param.resourceTypeList" item='item' open='(' separator=',' close=')'>
+                    #{item}
+                </foreach>
+            </if>
+            <if test="param.keywords!=null and param.keywords != ''">
+                and resource_management.object_name like concat('%',#{param.keywords},'%')
+            </if>
+            <if test="param.applicationCode!=null and param.applicationCode != ''">
+                and resource_management.application_code=#{param.applicationCode}
+            </if>
+            <if test="param.authorizedUserGroupIdList!=null and param.authorizedUserGroupIdList.size()!=0">
+                and resource_management.authorized_object_id in
+                <foreach collection="param.authorizedUserGroupIdList" item='item' open='(' separator=',' close=')'>
+                    #{item}
+                </foreach>
+            </if>
+            <if test="param.authDownloadList!=null and param.authDownloadList.size()!=0">
+                and resource_management.auth_download in
+                <foreach collection="param.authDownloadList" item='item' open='(' separator=',' close=')'>
+                    #{item}
+                </foreach>
+            </if>
+            <if test="param.authorizerIdList!=null and param.authorizerIdList.size()!=0">
+                and resource_management.authorize_user_id in
+                <foreach collection="param.authorizerIdList" item='item' open='(' separator=',' close=')'>
+                    #{item}
+                </foreach>
+            </if>
+            <if test="param.authTimeBegin!=null and param.authTimeBegin != ''
+            and param.authTimeEnd!=null and param.authTimeEnd != '' ">
+                and resource_management.auth_time BETWEEN #{param.authTimeBegin} and  #{param.authTimeEnd}
+            </if>
+            <if test="param.modifyTimeBegin!=null and param.modifyTimeBegin != ''
+            and param.modifyTimeEnd!=null and param.modifyTimeEnd != '' ">
+                and resource_management.modify_time BETWEEN  #{param.modifyTimeBegin} and #{param.modifyTimeEnd}
+            </if>
+
+            <if test="param.modifierIdList!=null and param.modifierIdList.size()!=0">
+                and resource_management.modify_user_id in
+                <foreach collection="param.modifierIdList" item='item' open='(' separator=',' close=')'>
+                    #{item}
+                </foreach>
+            </if>
+            <if test="param.onlineStatus!=null ">
+                and resource_management.online_status =#{param.onlineStatus}
+            </if>
+        </where>
+    </select>
+
+    <select id="getResourcePermissionByUserId" resultType="com.senses.permission.entity.ResourceManagement">
+        SELECT rs.*
+        FROM resource_management rs
+                 LEFT JOIN user ouser ON rs.authorized_object_id = ouser.id
+            AND rs.authorized_object_type = 1
+                 LEFT JOIN (
+            SELECT g.id as group_id
+            FROM `group` g
+                     INNER JOIN groups_users gu ON g.id = gu.group_id
+            WHERE gu.user_id = #{userId}
+        ) g2 ON rs.authorized_object_id = g2.group_id
+            AND rs.authorized_object_type = 2
+        WHERE rs.online_status = 1
+          AND rs.resource_type = #{resourceType}
+          AND rs.application_code = #{applicationCode}
+          AND (
+                (rs.authorized_object_type = 1 AND ouser.id = #{userId}) OR
+                (rs.authorized_object_type = 2 AND g2.group_id IS NOT NULL)
+            )
+          <if test="objectIds!=null and objectIds.size() > 0">
+              and rs.object_id in
+              <foreach collection="objectIds" item='item' open='(' separator=',' close=')'>
+                  #{item}
+              </foreach>
+          </if>
+    </select>
+
+</mapper>

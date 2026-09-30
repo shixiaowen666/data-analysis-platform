@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.senses.permission.mapper.UserMapper">
+    <resultMap type="com.senses.permission.entity.User" id="UserMap">
+        <result property="id" column="id" jdbcType="BIGINT"/>
+        <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+        <result property="email" column="email" jdbcType="VARCHAR"/>
+        <result property="enabled" column="enabled" jdbcType="BIGINT"/>
+        <result property="password" column="password" jdbcType="VARCHAR"/>
+        <result property="username" column="username" jdbcType="VARCHAR"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="lastPasswordResetTime" column="last_password_reset_time" jdbcType="TIMESTAMP"/>
+        <result property="phone" column="phone" jdbcType="VARCHAR"/>
+        <result property="deptId" column="dept_id" jdbcType="BIGINT"/>
+        <result property="deptName" column="dept_name" jdbcType="VARCHAR"/>
+        <result property="isAdmin" column="is_admin" jdbcType="TINYINT"/>
+        <result property="status" column="status" jdbcType="TINYINT"/>
+        <result property="source" column="source" jdbcType="TINYINT"/>
+        <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+        <result property="createdUser" column="created_user" jdbcType="VARCHAR"/>
+        <result property="modifyUser" column="modify_user" jdbcType="VARCHAR"/>
+        <result property="modifyTime" column="modify_time" jdbcType="TIMESTAMP"/>
+        <result property="approveStatus" column="approve_status" jdbcType="INTEGER"/>
+    </resultMap>
+    <resultMap type="com.senses.permission.entity.Role" id="RoleMap">
+        <result property="id" column="id" jdbcType="BIGINT"/>
+        <result property="appId" column="app_id" jdbcType="BIGINT"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="cnName" column="cn_name" jdbcType="VARCHAR"/>
+        <result property="type" column="type" jdbcType="TINYINT"/>
+        <result property="status" column="status" jdbcType="TINYINT"/>
+        <result property="createdUser" column="created_user" jdbcType="VARCHAR"/>
+        <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+        <result property="modifyUser" column="modify_user" jdbcType="VARCHAR"/>
+        <result property="modifyTime" column="modify_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+    <resultMap type="com.senses.permission.entity.DataRole" id="DataRoleMap">
+        <result property="id" column="id" jdbcType="BIGINT"/>
+        <result property="deptId" column="dept_id" jdbcType="BIGINT"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="remark" column="remark" jdbcType="VARCHAR"/>
+        <result property="status" column="status" jdbcType="TINYINT"/>
+        <result property="dataRoleType" column="data_role_type" jdbcType="TINYINT"/>
+        <result property="groupId" column="group_id" jdbcType="BIGINT"/>
+        <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+        <result property="createdUser" column="created_user" jdbcType="VARCHAR"/>
+        <result property="modifyUser" column="modify_user" jdbcType="VARCHAR"/>
+        <result property="modifyTime" column="modify_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+    <resultMap type="com.senses.permission.entity.Application" id="ApplicationMap">
+        <result property="id" column="id" jdbcType="BIGINT"/>
+        <result property="applicationKey" column="application_key" jdbcType="VARCHAR"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="code" column="code" jdbcType="VARCHAR"/>
+        <result property="status" column="status" jdbcType="TINYINT"/>
+        <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+        <result property="createdUser" column="created_user" jdbcType="VARCHAR"/>
+        <result property="modifyUser" column="modify_user" jdbcType="VARCHAR"/>
+        <result property="modifyTime" column="modify_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+    <resultMap type="com.senses.permission.entity.DataRolesPermission" id="DataRolesPermissionMap">
+        <result property="dataRoleId" column="data_role_id" jdbcType="BIGINT"/>
+        <result property="engineId" column="engine_id" jdbcType="BIGINT"/>
+        <result property="engine" column="engine" jdbcType="VARCHAR"/>
+        <result property="datasourceId" column="datasource_id" jdbcType="BIGINT"/>
+        <result property="tableName" column="table_name" jdbcType="VARCHAR"/>
+        <result property="columnName" column="column_name" jdbcType="VARCHAR"/>
+        <result property="action" column="action" jdbcType="TINYINT"/>
+        <result property="datasourceName" column="datasource_name" jdbcType="VARCHAR"/>
+        <result property="databaseName" column="database_name" jdbcType="VARCHAR"/>
+        <result property="status" column="status" jdbcType="VARCHAR"/>
+        <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+        <result property="createdUser" column="created_user" jdbcType="VARCHAR"/>
+        <result property="modifyTime" column="modify_time" jdbcType="TIMESTAMP"/>
+        <result property="modifyUser" column="modify_user" jdbcType="VARCHAR"/>
+        <result property="deadlineTime" column="deadline_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+    <select id="listByPage" resultMap="UserMap">
+        select
+        u.*,
+        d.name as dept_name,
+        app.approve_status
+        FROM
+        `user` u
+        join dept d on d.id = u.dept_id
+        left join
+        (
+            select
+            *
+            from
+            approve_record
+            where id in(
+                select
+                    max(id) as id
+                from
+                    approve_record
+                where flow_tag = 'upcUser'
+                group by approve_target_id
+            )
+        )app on u.id = app.approve_target_id
+        where u.status != 2
+        <if test="deptIds != null and deptIds.size()!=0">
+            and u.dept_id in
+            <foreach collection="deptIds" item='item' open='(' separator=',' close=')'>
+                #{item}
+            </foreach>
+        </if>
+        <if test="status != null">
+            and u.status = #{status}
+        </if>
+        <if test="filterVal != null and filterVal!=''">
+            and (u.username like concat('%',#{filterVal},'%')
+            or u.name like concat('%',#{filterVal},'%')
+            <if test="orId!=null">
+                or u.id=#{orId}
+            </if>
+            )
+        </if>
+        order by u.created_time desc
+    </select>
+    <select id="count" resultType="long">
+        select
+        count(1)
+        FROM
+        `user` u
+        join dept d on d.id = u.dept_id
+        where u.status != 2
+        <if test="deptIds != null and deptIds.size()!=0">
+            and u.dept_id in
+            <foreach collection="deptIds" item='item' open='(' separator=',' close=')'>
+                #{item}
+            </foreach>
+        </if>
+        <if test="status != null">
+            and u.status = #{status}
+        </if>
+        <if test="filterVal != null and filterVal!=''">
+            and (u.username like concat('%',#{filterVal},'%')
+            or u.name like concat('%',#{filterVal},'%')
+            <if test="orId!=null">
+                or u.id=#{orId}
+            </if>
+            )
+        </if>
+    </select>
+
+    <select id="selectInfoByUserId" resultMap="UserMap">
+        select
+        u.*,
+        d.name as dept_name
+        FROM
+        `user` u
+        join dept d on d.id = u.dept_id
+        where u.id=#{userId} and u.status!=2
+    </select>
+
+    <select id="listByDeptsOrGroupsOrName" resultMap="UserMap">
+        select
+        u1.*
+        from
+        (
+            select
+            u.*
+            FROM
+            `user` u
+            join dept d on d.id = u.dept_id
+            where u.status = 1
+            <if test="deptGroupNameUserParam.deptIds!=null and deptGroupNameUserParam.deptIds.size()>0">
+                and u.dept_id in
+                <foreach collection="deptGroupNameUserParam.deptIds" item='item' open='(' separator=',' close=')'>
+                    #{item}
+                </foreach>
+            </if>
+        )u1
+        join
+        (
+            select
+            distinct u.*
+            FROM
+            `user` u
+            left join groups_users gu on gu.user_id = u.id
+            where u.status = 1
+            <if test="deptGroupNameUserParam.groupIds!=null and deptGroupNameUserParam.groupIds.size()>0">
+                and gu.group_id in
+                <foreach collection="deptGroupNameUserParam.groupIds" item='item' open='(' separator=',' close=')'>
+                    #{item}
+                </foreach>
+            </if>
+        )u2 on u1.id = u2.id
+        join
+        (
+            select
+            distinct u.*
+            FROM
+            `user` u
+            where u.status = 1
+            <if test="deptGroupNameUserParam.name!=null and deptGroupNameUserParam.name!=''">
+                and (
+                    u.username like concat('%',#{deptGroupNameUserParam.name},'%')
+                    or u.name like concat('%',#{deptGroupNameUserParam.name},'%')
+                )
+            </if>
+        )u3 on u1.id = u3.id
+    </select>
+    <select id="getInfoByIds" resultMap="UserMap">
+        select
+        u.*,
+        d.name as dept_name
+        FROM
+        `user` u
+        join dept d on d.id = u.dept_id
+        where
+        u.id in
+        <foreach collection="userIds" item='item' open='(' separator=',' close=')'>
+            #{item}
+        </foreach>
+    </select>
+    <select id="getInfoByUsernames" resultMap="UserMap">
+        select
+        u.*,
+        d.name as dept_name
+        FROM
+        `user` u
+        join dept d on d.id = u.dept_id
+        where
+        u.username in
+        <foreach collection="userNames" item='item' open='(' separator=',' close=')'>
+            #{item}
+        </foreach>
+    </select>
+
+    <select id="roleTreeList" resultMap="RoleMap">
+        SELECT
+        r.*
+        FROM
+        role r
+        <if test="approveStatus!=null and approveStatus == 0">
+            join (
+                select
+                distinct *
+                from
+                users_roles_draft ur1
+                where ur1.user_id=#{userId}
+            )ur on ur.role_id = r.id
+        </if>
+        <if test="approveStatus==null or approveStatus != 0">
+            join users_roles ur on ur.user_id=#{userId} and ur.role_id = r.id
+        </if>
+        union
+        SELECT
+        r.*
+        FROM
+        depts_roles dr
+        join `role` r on dr.role_id = r.id and r.`status` = 1
+        where dr.dept_id in
+        <foreach collection="deptIds" item='item' open='(' separator=',' close=')'>
+            #{item}
+        </foreach>
+        union
+        SELECT
+        r.*
+        from
+        groups_roles gr
+        join `role` r on r.`status` =1 and gr.role_id=r.id
+        join groups_users gu on gr.group_id = gu.group_id
+        join `user` u on u.id = #{userId} and gu.user_id = u.id
+    </select>
+
+    <select id="dataRoleTreeList" resultMap="DataRoleMap">
+        SELECT
+          r.*
+        FROM
+           data_role r
+        join users_data_roles ur on ur.user_id=#{userId} and ur.data_role_id = r.id
+        union
+        SELECT
+         r.*
+        FROM
+            depts_data_roles dr
+         join `data_role` r on dr.data_role_id = r.id and r.`status` = 1
+        where dr.dept_id in
+        <foreach collection="deptIds" item='item' open='(' separator=',' close=')'>
+            #{item}
+        </foreach>
+        union
+        SELECT
+            r.*
+        from
+            groups_data_roles gr
+        join `data_role` r on r.`status` =1 and gr.data_role_id=r.id
+        join groups_users gu on gr.group_id = gu.group_id
+        join `user` u on u.id = #{userId} and gu.user_id = u.id
+    </select>
+    <select id="getUserApplication" resultMap="ApplicationMap">
+        select
+        distinct a.*
+        from
+        application a
+        join
+        (
+            SELECT
+            r.*
+            FROM
+            role r
+            <if test="approveStatus!=null and approveStatus == 0">
+                join (
+                    select
+                        distinct *
+                    from
+                        users_roles_draft ur1
+                    where ur1.user_id=#{userId}
+                )ur on ur.role_id = r.id
+            </if>
+            <if test="approveStatus==null or approveStatus != 0">
+                join users_roles ur on ur.user_id=#{userId} and ur.role_id = r.id
+            </if>
+            union
+            SELECT
+            r.*
+            FROM
+            depts_roles dr
+            join `role` r on dr.role_id = r.id and r.`status` = 1
+            where dr.dept_id in
+            <foreach collection="deptIds" item='item' open='(' separator=',' close=')'>
+                #{item}
+            </foreach>
+            union
+            SELECT
+            r.*
+            from
+            groups_roles gr
+            join `role` r on r.`status` =1 and gr.role_id=r.id
+            join groups_users gu on gr.group_id = gu.group_id
+            join `user` u on u.id = #{userId} and gu.user_id = u.id
+        )ro on a.id = ro.app_id
+    </select>
+
+    <select id="getMyDeptDataRoleTreeList" resultMap="DataRoleMap">
+        SELECT
+        r.*
+        FROM
+        data_role r
+        <if test="approveStatus!=null and approveStatus == 0">
+            join users_data_roles_draft ur on r.data_role_type = 0 and ur.user_id=#{userId} and ur.data_role_id = r.id
+        </if>
+        <if test="approveStatus==null or approveStatus != 0">
+            join users_data_roles ur on r.data_role_type = 0 and ur.user_id=#{userId} and ur.data_role_id = r.id
+        </if>
+        union
+        SELECT
+        r.*
+        FROM
+        depts_data_roles dr
+        join `data_role` r on r.data_role_type = 0 and dr.data_role_id = r.id and r.`status` = 1
+        where dr.dept_id in
+        <foreach collection="deptIds" item='item' open='(' separator=',' close=')'>
+            #{item}
+        </foreach>
+    </select>
+    <select id="getMyGroupDataRoleTreeList" resultMap="DataRoleMap">
+        SELECT
+            r.*,
+            gr.group_id
+        from
+            groups_data_roles gr
+            join `data_role` r on r.data_role_type = 0 and r.`status` =1 and gr.data_role_id=r.id
+            join groups_users gu on gr.group_id = gu.group_id
+            join `user` u on u.id = #{userId} and gu.user_id = u.id
+    </select>
+    <select id="getMyDataRoleTreeList" resultMap="DataRolesPermissionMap">
+        SELECT
+            drp.*
+        from
+            `data_role` r
+            join users_data_roles udr on udr.user_id = #{userId} and r.data_role_type = 1 and r.id=udr.data_role_id and r.status =1
+            join data_roles_permission drp on r.id = drp.data_role_id
+        where 1=1
+        <if test="param.engineIds!=null and param.engineIds.size()!=0">
+            and drp.engine_id in
+            <foreach collection="param.engineIds" item='item' open='(' separator=',' close=')'>
+                #{item}
+            </foreach>
+        </if>
+        <if test="param.databaseNames!=null and param.databaseNames.size()!=0">
+            and drp.database_name in
+            <foreach collection="param.databaseNames" item='item' open='(' separator=',' close=')'>
+                #{item}
+            </foreach>
+        </if>
+        <if test="param.actions!=null and param.actions.size()>0">
+            and
+            <foreach collection="param.actions" item='item' open='(' separator=' or ' close=')'>
+                drp.action &amp; #{item} = #{item}
+            </foreach>
+        </if>
+        <if test="param.filterVal!=null and param.filterVal != ''">
+            and (drp.table_name like concat('%',#{param.filterVal},'%')
+                or drp.column_name like concat('%',#{param.filterVal},'%'))
+        </if>
+    </select>
+
+</mapper>

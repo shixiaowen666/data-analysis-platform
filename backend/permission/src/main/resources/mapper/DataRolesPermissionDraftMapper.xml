@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.senses.permission.mapper.DataRolesPermissionDraftMapper">
+    <resultMap type="com.senses.permission.entity.DataRolesPermissionDraft" id="DataRolesPermissionDraftMap">
+        <result property="id" column="id" jdbcType="BIGINT"/>
+        <result property="dataRoleId" column="data_role_id" jdbcType="BIGINT"/>
+        <result property="engineId" column="engine_id" jdbcType="BIGINT"/>
+        <result property="engine" column="engine" jdbcType="VARCHAR"/>
+        <result property="datasourceId" column="datasource_id" jdbcType="BIGINT"/>
+        <result property="tableName" column="table_name" jdbcType="VARCHAR"/>
+        <result property="columnName" column="column_name" jdbcType="VARCHAR"/>
+        <result property="action" column="action" jdbcType="TINYINT"/>
+        <result property="datasourceName" column="datasource_name" jdbcType="VARCHAR"/>
+        <result property="databaseName" column="database_name" jdbcType="VARCHAR"/>
+        <result property="status" column="status" jdbcType="VARCHAR"/>
+        <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+        <result property="createdUser" column="created_user" jdbcType="VARCHAR"/>
+        <result property="modifyTime" column="modify_time" jdbcType="TIMESTAMP"/>
+        <result property="modifyUser" column="modify_user" jdbcType="VARCHAR"/>
+        <result property="deadlineTime" column="deadline_time" jdbcType="TIMESTAMP"/>
+
+    </resultMap>
+
+    <select id="selectListByParam" resultMap="DataRolesPermissionDraftMap">
+        SELECT
+        drp.*
+        from
+        data_roles_permission_draft drp
+        where drp.data_role_id = #{param.id}
+        <if test="param.engineIds!=null and param.engineIds.size()!=0">
+            and drp.engine_id in
+            <foreach collection="param.engineIds" item='item' open='(' separator=',' close=')'>
+                #{item}
+            </foreach>
+        </if>
+        <if test="param.databaseNames!=null and param.databaseNames.size()!=0">
+            and drp.database_name in
+            <foreach collection="param.databaseNames" item='item' open='(' separator=',' close=')'>
+                #{item}
+            </foreach>
+        </if>
+        <if test="param.actions!=null and param.actions.size()>0">
+            and
+            <foreach collection="param.actions" item='item' open='(' separator=' or ' close=')'>
+                drp.action &amp; #{item} = #{item}
+            </foreach>
+        </if>
+        <if test="param.filterVal!=null and param.filterVal != ''">
+            and (drp.table_name like concat('%',#{param.filterVal},'%')
+            or drp.column_name like concat('%',#{param.filterVal},'%'))
+        </if>
+    </select>
+</mapper>

@@ -1,0 +1,118 @@
+server:
+  port: 8591
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: bi-backend
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ip:port
+        username: nacos
+        password: nacos
+          # 增加以下配置
+        heart-beat-interval: 5000
+        heart-beat-timeout: 15000
+        ip-delete-timeout: 30000
+        # 关键：设置更长的连接超时
+        client:
+          connect-timeout: 10000
+          read-timeout: 10000
+        register-enabled: false
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://ip:port/new_bi?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: chatbi
+    password: FlXvMdkofiMFZTAKFu4L
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 20
+      stat-view-servlet:
+        enabled: false
+      web-stat-filter:
+        enabled: false
+
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    serialization:
+      write-dates-as-timestamps: false
+    default-property-inclusion: non_null
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+feign:
+  client:
+    config:
+      default:
+        connect-timeout: 5000
+        read-timeout: 10000
+        logger-level: basic
+      bi-backend:
+        connect-timeout: 3000
+        read-timeout: 5000
+  compression:
+    request:
+      enabled: true
+      mime-types: text/xml,application/xml,application/json
+      min-request-size: 2048
+    response:
+      enabled: true
+
+logging:
+  level:
+    com.bi: debug
+    com.metadata: debug
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+  show-actuator: false
+
+###minio配置
+minio:
+  endpoint: http://ip:port
+  accessKey: admin
+  secretKey: minio123456
+  chatdata:
+    bucketName: chatdata
+
+# JWT认证配置
+jwt:
+  accesstoken: Accesstoken
+  header: Authorization  # JWT认证请求头名称
+  secret: chatbi-jwt-secret-key-for-production-2026  # JWT签名密钥 (≥32字符)
+  # token 过期时间 1天
+  expiration: 86400000  # 令牌过期时间，单位为毫秒，即1天

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<configuration debug="false" scan="true" scanPeriod="5 minutes">
+    <contextName>chat-server</contextName>
+
+    <!-- 日志文件存储路径 -->
+    <property name="LOG_HOME" value="logs/"/>
+
+    <!-- 控制台输出 -->
+    <appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <pattern>%date{yyyy-MM-dd HH:mm:ss.SSS} | %X{trace_id} | %thread | %-5level | %class{200}\(%line\) | %msg%n</pattern>
+            <param name="ConversionPattern" value="%d{yyyy-MM-dd HH:mm:ss} [%-5p] %c (%F:%L) - %m%n"/>
+        </layout>
+    </appender>
+
+    <!-- Info -->
+    <appender name="info" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_HOME}/info/chat-server-info.log</file>
+        <!-- 配置过滤 error的日志不会进入到info里 -->
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>DENY</onMatch>
+            <onMismatch>NEUTRAL</onMismatch>
+        </filter>
+        <!-- 每天生成日志文件 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_HOME}/info/chat-server.%d{yyyy-MM-dd}-%i-info.log.gz</fileNamePattern>
+            <maxFileSize>50MB</maxFileSize>
+            <!-- 日志文件保留30天 -->
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+        <!-- 格式化输出 -->
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%date{yyyy-MM-dd HH:mm:ss.SSS} | %thread | %-5level | %logger{36}.%M\(%line\) | %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Error -->
+    <appender name="error" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_HOME}/error/chat-server-error.log</file>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>
+        </filter>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_HOME}/error/chat-server.%d{yyyy-MM-dd}-%i-error.log.gz</fileNamePattern>
+            <maxFileSize>50MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>2GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%date{yyyy-MM-dd HH:mm:ss.SSS} | %thread | %-5level | %logger{36}.%M\(%line\) | %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 异步日志配置 -->
+    <appender name="info_async" class="ch.qos.logback.classic.AsyncAppender">
+        <discardingThreshold>3000</discardingThreshold>
+        <queueSize>10000</queueSize>
+        <appender-ref ref="info"/>
+    </appender>
+
+    <appender name="error_async" class="ch.qos.logback.classic.AsyncAppender">
+        <discardingThreshold>3000</discardingThreshold>
+        <queueSize>10000</queueSize>
+        <appender-ref ref="error"/>
+    </appender>
+
+    <root level="info">
+        <appender-ref ref="error_async"/>
+        <appender-ref ref="info_async"/>
+        <appender-ref ref="stdout"/>
+    </root>
+
+</configuration>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.senses.permission.mapper.TableTagRelationMapper">
+    <resultMap type="com.senses.permission.entity.TableTagRelation" id="TableTagRelationMap">
+        <result property="id" column="id" jdbcType="BIGINT"/>
+        <result property="tableId" column="table_id" jdbcType="BIGINT"/>
+        <result property="relationType" column="relation_type" jdbcType="VARCHAR"/>
+        <result property="createdAt" column="created_at" jdbcType="TIMESTAMP"/>
+        <result property="updatedAt" column="updated_at" jdbcType="TIMESTAMP"/>
+        <result property="isDeleted" column="is_deleted" jdbcType="TINYINT"/>
+        <result property="tableName" column="table_name" jdbcType="VARCHAR"/>
+    </resultMap>
+
+
+    <select id="selectByTableId" resultType="com.senses.permission.entity.TableTagRelation">
+        SELECT ttr.*
+        FROM table_tag_relations ttr
+        WHERE ttr.table_id = #{tableId}
+    </select>
+
+</mapper>

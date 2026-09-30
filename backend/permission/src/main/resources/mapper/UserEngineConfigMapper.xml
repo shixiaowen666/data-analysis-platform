@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.senses.permission.mapper.UserEngineConfigMapper">
+    <resultMap type="com.senses.permission.entity.UserEngineConfig" id="UserEngineConfigMap">
+        <result property="id" column="id" jdbcType="INTEGER"/>
+        <result property="usrId" column="usr_id" jdbcType="INTEGER"/>
+        <result property="engineConfig" column="engine_config" jdbcType="VARCHAR"/>
+    </resultMap>
+</mapper>

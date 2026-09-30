@@ -1,0 +1,47 @@
+# Maven 编译输出
+target/
+*/target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# 日志文件
+logs/
+log/
+
+# IDEA 本地配置（全部忽略）
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Claude AI 本地缓存
+.claude/
+CLAUDE.md
+
+# STS/Eclipse 相关
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# maven wrapper
+mvnw
+mvnw.cmd
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# 编译缓存
+*.class
+*.jar
+*.war
+*.log
+*.tmp
+*.bak
+*.tar
+
+# CI配置（如果你不需要管理gitlab-ci.yml可删除这行）
+.gitlab-ci.yml

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.senses.permission.mapper.GroupMapper">
+    <resultMap type="com.senses.permission.entity.Group" id="GroupMap">
+        <result property="id" column="id" jdbcType="BIGINT"/>
+        <result property="groupName" column="group_name" jdbcType="VARCHAR"/>
+        <result property="status" column="status" jdbcType="TINYINT"/>
+        <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+        <result property="createdUser" column="created_user" jdbcType="VARCHAR"/>
+        <result property="modifyUser" column="modify_user" jdbcType="VARCHAR"/>
+        <result property="modifyTime" column="modify_time" jdbcType="TIMESTAMP"/>
+        <result property="userId" column="user_id" jdbcType="BIGINT"/>
+        <result property="approveStatus" column="approve_status" jdbcType="INTEGER"/>
+        <result property="userCount" column="user_count" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <select id="listByPage" resultMap="GroupMap">
+        select
+        g.*,
+        ar1.approve_status,
+        if(gu.user_count is null,0,gu.user_count) user_count
+        FROM
+        `group` g
+        left join
+        (
+            select
+            *
+            from
+            approve_record ar
+            where ar.id in(
+                select
+                    max(id) as id
+                from
+                    approve_record a
+                where
+                    a.flow_tag = 'upcUserGroup'
+                group by approve_target_id
+            )
+        )ar1 on g.id = ar1.approve_target_id
+        left join
+        (
+            select group_id,count(*) as user_count from groups_users group by group_id
+        )gu on g.id = gu.group_id
+        where status != 2
+        <if test="filterVal != null and filterVal!=''">
+            and (g.group_name like concat('%',#{filterVal},'%')
+                or g.created_user like concat('%',#{filterVal},'%')
+            )
+        </if>
+        order by g.created_time desc
+    </select>
+
+    <select id="count" resultType="long">
+        select
+        count(1)
+        FROM
+        `group` g
+        where status != 2
+        <if test="filterVal != null and filterVal!=''">
+            and (g.group_name like concat('%',#{filterVal},'%')
+                or g.created_user like concat('%',#{filterVal},'%')
+            )
+        </if>
+    </select>
+
+    <select id="selectInfoByGroupId" resultMap="GroupMap">
+        select
+        g.*
+        FROM
+        `group` g
+        where g.status!=2
+         and g.id=#{groupId}
+    </select>
+    <select id="listByUserIds" resultMap="GroupMap">
+        select
+        g.*,
+        gu.user_id
+        FROM
+        `group` g
+        join groups_users gu on g.status =1 and gu.group_id =g.id
+        where
+        gu.user_id in
+        <foreach collection="userIds" item='item' open='(' separator=',' close=')'>
+            #{item}
+        </foreach>
+    </select>
+
+    <select id="listByUsernames" resultMap="GroupMap">
+        select
+        distinct g.*
+        FROM
+        `group` g
+        join groups_users gu on g.status =1 and gu.group_id =g.id
+        join `user` u on gu.user_id = u.id
+        where
+        u.username in
+        <foreach collection="usernames" item='item' open='(' separator=',' close=')'>
+            #{item}
+        </foreach>
+    </select>
+</mapper>

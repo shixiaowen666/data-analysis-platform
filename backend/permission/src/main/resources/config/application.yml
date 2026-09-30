@@ -1,0 +1,57 @@
+server:
+  port: 8488
+
+spring:
+  application.name: permission
+  datasource:
+    url: jdbc:mysql://ip:port/dap_permission?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull
+    username: chatbi
+    password: FlXvMdkofiMFZTAKFu4L
+    driver-class-name: com.mysql.jdbc.Driver
+  jackson:
+    time-zone: GMT+8
+  servlet:
+    multipart:
+      max-request-size: 100MB
+      max-file-size: 100MB
+
+mybatis-plus:
+  mapper-locations: classpath:/mapper/*Mapper.xml
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+hystrix.command.default.execution.isolation.thread.timeoutInMilliseconds: 600000
+
+ribbon:
+  ReadTimeout: 60000
+  ConnectTimeout: 60000
+
+pagehelper:
+  helper-dialect: mysql
+  reasonable: true
+  support-methods-arguments: true
+  params: count=countSql
+
+password-key: rNy97rZZQqBLfmqxJPSJlquw1KNXoNg8
+reset-password-url: http://xxxx?token=
+
+jwt:
+  header: Authorization
+  accesstoken: Accesstoken
+  secret: chatbi-jwt-secret-key-for-production-2026  # JWT签名密钥 (≥32字符)
+  # token 过期时间 1天
+  expiration: 86400000
+
+server.image-tag: 1.0.1
+
+spring.cloud.nacos:
+  discovery.server-addr: ip:port
+
+feign:
+  senses-chat: http://ip
+
+

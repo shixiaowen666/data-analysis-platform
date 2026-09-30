@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.senses.permission.mapper.DataRolesPermissionMapper">
+    <resultMap type="com.senses.permission.entity.DataRolesPermission" id="DataRolesPermissionMap">
+        <result property="id" column="id" jdbcType="BIGINT"/>
+        <result property="dataRoleId" column="data_role_id" jdbcType="BIGINT"/>
+        <result property="engineId" column="engine_id" jdbcType="BIGINT"/>
+        <result property="engine" column="engine" jdbcType="VARCHAR"/>
+        <result property="datasourceId" column="datasource_id" jdbcType="BIGINT"/>
+        <result property="tableName" column="table_name" jdbcType="VARCHAR"/>
+        <result property="columnName" column="column_name" jdbcType="VARCHAR"/>
+        <result property="action" column="action" jdbcType="TINYINT"/>
+        <result property="datasourceName" column="datasource_name" jdbcType="VARCHAR"/>
+        <result property="databaseName" column="database_name" jdbcType="VARCHAR"/>
+        <result property="status" column="status" jdbcType="VARCHAR"/>
+        <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+        <result property="createdUser" column="created_user" jdbcType="VARCHAR"/>
+        <result property="modifyTime" column="modify_time" jdbcType="TIMESTAMP"/>
+        <result property="modifyUser" column="modify_user" jdbcType="VARCHAR"/>
+        <result property="deadlineTime" column="deadline_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+    <select id="selectListByParam" resultMap="DataRolesPermissionMap">
+        SELECT
+            drp.data_role_id,
+            drp.engine_id,
+            drp.engine,
+            drp.datasource_id,
+            drp.table_name,
+            drp.column_name,
+            drp.action,
+            drp.datasource_name,
+            drp.database_name,
+            drp.created_time,
+            drp.created_user,
+            drp.modify_time,
+            drp.modify_user,
+            drp.deadline_time
+        from
+        data_roles_permission drp
+        where drp.data_role_id = #{param.id}
+        <if test="param.engineIds!=null and param.engineIds.size()!=0">
+            and drp.engine_id in
+            <foreach collection="param.engineIds" item='item' open='(' separator=',' close=')'>
+                #{item}
+            </foreach>
+        </if>
+        <if test="param.databaseNames!=null and param.databaseNames.size()!=0">
+            and drp.database_name in
+            <foreach collection="param.databaseNames" item='item' open='(' separator=',' close=')'>
+                #{item}
+            </foreach>
+        </if>
+        <if test="param.actions!=null and param.actions.size()>0">
+            and
+            <foreach collection="param.actions" item='item' open='(' separator=' or ' close=')'>
+                drp.action &amp; #{item} = #{item}
+            </foreach>
+        </if>
+        <if test="param.filterVal!=null and param.filterVal != ''">
+            and (drp.database_name like concat('%',#{param.filterVal},'%')
+            or drp.table_name like concat('%',#{param.filterVal},'%'))
+        </if>
+        <if test="param.selectApprove!=null and param.selectApprove==1">
+        union
+            SELECT
+                drp.data_role_id,
+                drp.engine_id,
+                drp.engine,
+                drp.datasource_id,
+                drp.table_name,
+                drp.column_name,
+                drp.action,
+                drp.datasource_name,
+                drp.database_name,
+                drp.created_time,
+                drp.created_user,
+                drp.modify_time,
+                drp.modify_user,
+                drp.deadline_time
+            from
+                data_roles_permission_draft drp
+            where drp.data_role_id = #{param.id}
+            <if test="param.engineIds!=null and param.engineIds.size()!=0">
+                and drp.engine_id in
+                <foreach collection="param.engineIds" item='item' open='(' separator=',' close=')'>
+                    #{item}
+                </foreach>
+            </if>
+            <if test="param.databaseNames!=null and param.databaseNames.size()!=0">
+                and drp.database_name in
+                <foreach collection="param.databaseNames" item='item' open='(' separator=',' close=')'>
+                    #{item}
+                </foreach>
+            </if>
+            <if test="param.actions!=null and param.actions.size()>0">
+                and
+                <foreach collection="param.actions" item='item' open='(' separator=' or ' close=')'>
+                    drp.action &amp; #{item} = #{item}
+                </foreach>
+            </if>
+            <if test="param.filterVal!=null and param.filterVal != ''">
+                and (drp.database_name like concat('%',#{param.filterVal},'%')
+                or drp.table_name like concat('%',#{param.filterVal},'%'))
+            </if>
+        </if>
+    </select>
+
+    <select id="getUserDatarolePermission" resultMap="DataRolesPermissionMap">
+        select
+        drp.datasource_id,
+        drp.table_name,
+        drp.action
+        from
+        (
+            SELECT
+                r.id
+            from
+                `data_role` r
+                join users_data_roles udr on udr.user_id = #{userId} and r.id=udr.data_role_id and r.status = 1
+            union
+            SELECT
+                r.id
+            FROM
+                depts_data_roles dr
+                join `data_role` r on r.data_role_type = 0 and dr.data_role_id = r.id and r.`status` = 1
+            where dr.dept_id in
+            <foreach collection="deptIds" item='item' open='(' separator=',' close=')'>
+                #{item}
+            </foreach>
+            union
+            SELECT
+                r.id
+            from
+                groups_data_roles gr
+            join `data_role` r on r.`status` =1 and gr.data_role_id=r.id
+            join groups_users gu on gr.group_id = gu.group_id and gu.user_id=#{userId}
+        )r
+        join
+        (
+            select
+                drp1.datasource_id,
+                drp1.table_name,
+                drp1.data_role_id,
+                drp1.action
+            from
+            data_roles_permission drp1
+            where drp1.deadline_time &gt;= DATE_FORMAT(NOW(), '%Y-%m-%d 00:00:00')
+            and drp1.column_name = '*'
+            <if test="param.engineIds!=null and param.engineIds.size()!=0">
+                and drp1.engine_id in
+                <foreach collection="param.engineIds" item='item' open='(' separator=',' close=')'>
+                    #{item}
+                </foreach>
+            </if>
+            <if test="param.databaseNames!=null and param.databaseNames.size()!=0">
+                and drp1.database_name in
+                <foreach collection="param.databaseNames" item='item' open='(' separator=',' close=')'>
+                    #{item}
+                </foreach>
+            </if>
+            <if test="param.actions!=null and param.actions.size()>0">
+                and
+                <foreach collection="param.actions" item='item' open='(' separator=' or ' close=')'>
+                    drp1.action &amp; #{item} = #{item}
+                </foreach>
+            </if>
+            <if test="param.filterVal!=null and param.filterVal != ''">
+                and (drp1.table_name like concat('%',#{param.filterVal},'%')
+                    or drp1.column_name like concat('%',#{param.filterVal},'%'))
+            </if>
+            union
+            select
+                drp2.datasource_id,
+                drp2.table_name,
+                drp2.data_role_id,
+                drp2.action
+            from
+            data_roles_permission_draft drp2
+            where drp2.deadline_time &gt;= DATE_FORMAT(NOW(), '%Y-%m-%d 00:00:00')
+            and drp2.column_name = '*'
+            <if test="param.engineIds!=null and param.engineIds.size()!=0">
+                and drp2.engine_id in
+                <foreach collection="param.engineIds" item='item' open='(' separator=',' close=')'>
+                    #{item}
+                </foreach>
+            </if>
+            <if test="param.databaseNames!=null and param.databaseNames.size()!=0">
+                and drp2.database_name in
+                <foreach collection="param.databaseNames" item='item' open='(' separator=',' close=')'>
+                    #{item}
+                </foreach>
+            </if>
+            <if test="param.actions!=null and param.actions.size()>0">
+                and
+                <foreach collection="param.actions" item='item' open='(' separator=' or ' close=')'>
+                    drp2.action &amp; #{item} = #{item}
+                </foreach>
+            </if>
+            <if test="param.filterVal!=null and param.filterVal != ''">
+                and (drp2.table_name like concat('%',#{param.filterVal},'%')
+                    or drp2.column_name like concat('%',#{param.filterVal},'%'))
+            </if>
+        )drp on r.id = drp.data_role_id
+
+    </select>
+</mapper>

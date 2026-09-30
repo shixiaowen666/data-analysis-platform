@@ -1,0 +1,27 @@
+package com.senses.permission.config;
+
+import org.springframework.stereotype.Component;
+
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.Base64;
+
+@Component
+public class KeyPairHolder {
+
+    private static final String PRIVATE_KEY_BASE64 = "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCs/1gNyhk4SbawmLE9ZwsH36/GEMdkhqNqN4Ga2byquVBU0qn0600J02llOnj8CNQXqWSnVTyHSuf0KA4YgzcMUZT9DV1JOerUpIOAW/a0HphfdcxMZOmbiwAWTl0XgYyaEyXc2T9sX/29/qx0QYBz82Cv1wt65GMrQ3caBedIGuynWs5VfsN0deuQgc9/jnf0fnxRz4CVksWZ0J9Cm4F5VPr11J5htl49vzgDdEY3jNkzdwzrgD0pEcaCeyyiSs/CfPpB5W77vrNtAso57zVLcOjL71D58P+uT5z7w6xpUnbaRDJv2hbcAScQX5rfNfklfZbgBv03a6QQdxTyB5SNAgMBAAECggEABORJTyyCvY14c1jOxc7cqDz9cw/4f2gL0pe3goaVJLO0Qo3DA6Hfetj/e8ulOthqEBg4kfKH6voMG7woaxRTKzYN8zQPsJLvboXCkfYOJtlo00wyrT27DR+nVNO9Vj1ezMcgiAGDOMAj6rcuLuRgqqBJAKsUdnj8sXvviazjwkcBGrGCmZahKZ6Gn4M50VcYRoxfaD9eyDoHhBQ0he19XFNUSRretw1XHNPeszs2SSDl1PQI/03Df8AEoiup+lp6/OOCK1U0LAQMLjgpJGajoRWjMv0ZOZcnTILabVVaX1v7dNvedDNWQkQD//gtL/CzIcHG8sIhJLqpioTEDkwZiQKBgQDew+PHRgylGvqiGnPrEJWHko9613Jk+6g5qFaYxk+YuC6QdiG/cRwX2yNKnABz3A30Nv1b0waSrBRBoSrhhY0VJtXcA6gKr7GHUhsDHXiWTWjMypgrZkVZeKBEV0owqJmGrpl1tFJvOypHuOBGdRdc4czMzwQCIGsHDC80gx6rtQKBgQDGzqpekTvuiA0ebJr80EPRO3J50ZASVtNMVYflBdD2oP3iHoHgKMxtACntg7N2QHMU8UbJM/+vZ3xn5HFkiP0sIaUwn9Bla5R2mnYJN83xsD2u/iub7PSVWq3szYiPmGsiPeX4pH0nlUCuWC84N5o3xXC3wfEK7UE2lE0L+WI8eQKBgQDOQz9DIl9O+R4cvrWab+6ka1Yi/h5T1pi7Wl1kdCr7U376EAfLhWXnyOZyjOP2Y0kgWVJalZi+cksHQb28t7YcYasfXttXmbqde667QayILwDcrrIbbUTFRWXQIar2RwZwqHY7gE3b5EKPymUPmBebzw+cjApAFdhD3EpRKx9ZCQKBgAIM96zqCpg3RwtdS2v4Kfrqhg/DnZzS0HMlHrW6DaG9n2DJt8U8Jn+pVMViamN53rYElxpUMvr4MkxQCutijln6Lt4Fh/zD01A136nQrYskqj432PNOymcP/GNI63OvussroEekSrYxz+z8c+A8kpaorrT2hyn5sIaDmRfahqzhAoGADwuPvkyR2DhV1wIzxqCHwalGGeotWdGxf2q03wOsoPRWsBg8yA3uyX3/6BmqiypdyBkug0vLlFfQN43we2q3KYfHQxDRDpJjZpH4WyffLZZ7vz9mlNSunth0muFsoxHp3vkvXh6KT6pqIh80kq9cDKGZ26clpW+oEpihfKEbpwQ=";
+
+    private final PrivateKey privateKey;
+
+    public KeyPairHolder() throws Exception {
+        byte[] keyBytes = Base64.getDecoder().decode(PRIVATE_KEY_BASE64);
+        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
+        KeyFactory kf = KeyFactory.getInstance("RSA");
+        this.privateKey = kf.generatePrivate(spec);
+    }
+
+    public PrivateKey getPrivateKey() {
+        return privateKey;
+    }
+}

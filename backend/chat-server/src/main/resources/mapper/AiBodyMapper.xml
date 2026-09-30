@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chatbi.chat.mapper.AiBodyMapper">
+
+    <resultMap id="BaseResultMap" type="com.chatbi.chat.entity.AiBody">
+        <id property="id" column="id" jdbcType="INTEGER"/>
+        <result property="code" column="code" jdbcType="VARCHAR"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="description" column="description" jdbcType="VARCHAR"/>
+        <result property="interactionMode" column="interaction_mode" jdbcType="INTEGER"/>
+        <result property="themeCode" column="theme_code" jdbcType="VARCHAR"/>
+        <result property="authorizeStrategy" column="authorize_strategy" jdbcType="INTEGER"/>
+        <result property="createdBy" column="created_by" jdbcType="BIGINT"/>
+        <result property="createdAt" column="created_at" jdbcType="TIMESTAMP"/>
+        <result property="updatedBy" column="updated_by" jdbcType="BIGINT"/>
+        <result property="updatedAt" column="updated_at" jdbcType="TIMESTAMP"/>
+        <result property="hotWords" column="hot_words" jdbcType="VARCHAR"/>
+        <result property="tenantId" column="tenant_id" jdbcType="BIGINT"/>
+        <collection property="AiBodyKnowledgeInfoList"
+                    ofType="com.chatbi.chat.models.AiBodyKnowledgeInfo"
+                    notNullColumn="ki_id">
+            <id property="id" column="ki_id" jdbcType="BIGINT"/>
+            <result property="aiBodyId" column="ki_ai_body_id" jdbcType="BIGINT"/>
+            <result property="knowledgeElement" column="ki_knowledge_element" jdbcType="VARCHAR"/>
+        </collection>
+    </resultMap>
+
+    <select id="getAiBodyByCode" resultMap="BaseResultMap">
+        SELECT
+            a.*,
+            k.id AS ki_id,
+            k.ai_body_id AS ki_ai_body_id,
+            k.knowledge_element AS ki_knowledge_element
+        FROM dcar_ai_body a
+        LEFT JOIN ai_body_knowledge_info k ON a.id = k.ai_body_id
+        WHERE a.code = #{code}
+    </select>
+
+</mapper>

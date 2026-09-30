@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wm.semantic.mapper.OlapTableProMapper">
+    <select id="findDimCandidates" resultType="com.wm.semantic.dto.CandidateTable">
+        SELECT
+            t.id AS id,
+            t.tb_name AS name,
+            'table' AS type
+        FROM olap_table_pro t
+        JOIN olap_table_field_mapping map ON t.id = map.table_id
+        JOIN olap_basic_pro basic ON map.basic_id = basic.id
+        WHERE
+            t.tb_type_key IN (0, 1)
+            AND t.status = 3
+            AND map.status = 1
+            AND basic.category = 1
+            AND basic.status = 2
+            AND map.basic_id IN
+            <foreach collection="dimensionIds" open="(" separator="," close=")" item="id">
+                #{id}
+            </foreach>
+
+            <if test="preferredTableIds != null and !preferredTableIds.isEmpty()">
+                AND t.id IN
+                <foreach collection="preferredTableIds" open="(" separator="," close=")" item="id">
+                    #{id}
+                </foreach>
+            </if>
+
+        GROUP BY t.id, t.tb_name
+        HAVING COUNT(DISTINCT map.basic_id) = #{dimensionSize}
+
+        UNION ALL
+
+        SELECT
+            dm.id AS id,
+            dm.name AS name,
+            'model' AS type
+        FROM olap_data_model dm
+        LEFT JOIN olap_data_model_dimension dmd ON dmd.model_id = dm.id
+        JOIN olap_table_pro t ON t.id = dm.fact_table_id OR t.id = dmd.dim_table_id
+        JOIN olap_table_field_mapping map ON t.id = map.table_id
+        JOIN olap_basic_pro basic ON map.basic_id = basic.id
+        WHERE
+            dm.status = 1
+            AND t.status = 3
+            AND map.status = 1
+            AND basic.category = 1
+            AND basic.status = 2
+            AND map.basic_id IN
+            <foreach collection="dimensionIds" open="(" separator="," close=")" item="id">
+                #{id}
+            </foreach>
+
+            <if test="preferredModelIds != null and !preferredModelIds.isEmpty()">
+                AND dm.id IN
+                <foreach collection="preferredModelIds" open="(" separator="," close=")" item="id">
+                    #{id}
+                </foreach>
+            </if>
+
+        GROUP BY dm.id, dm.name
+        HAVING COUNT(DISTINCT map.basic_id) = #{dimensionSize}
+    </select>
+
+    <select id="findIndicatorIdsByTableId" resultType="java.lang.Long">
+        SELECT map.basic_id
+        FROM olap_table_field_mapping map
+        JOIN olap_basic_pro basic ON map.basic_id = basic.id
+        WHERE map.table_id = #{tableId}
+          AND map.status = 1
+          AND basic.category = 2
+          AND basic.status = 2
+    </select>
+
+    <select id="batchFindIndicatorsByTablesAndModels" resultType="com.wm.semantic.dto.TableIndicatorDto">
+        -- 1. 物理表对应的指标
+        SELECT DISTINCT
+        map.table_id AS objId,
+        'table' AS objType,
+        map.basic_id AS indicatorId
+        FROM olap_table_field_mapping map
+        JOIN olap_basic_pro basic ON map.basic_id = basic.id
+        WHERE
+        map.status = 1
+        AND basic.category = 2  -- 指标
+        AND basic.status = 2
+        <!-- 表的查询 -->
+        <if test="tableIds != null and !tableIds.isEmpty()">
+            AND map.table_id IN
+            <foreach collection="tableIds" index="index" item="item" open="(" separator="," close=")">
+                #{item}
+            </foreach>
+        </if>
+        <if test="tableIds == null or tableIds.isEmpty()">
+            AND 1 = 2
+        </if>
+
+        UNION
+
+        -- 2. 模型对应的指标（事实表 + 维度表）
+        SELECT DISTINCT
+        dm.id AS objId,
+        'model' AS objType,
+        map.basic_id AS indicatorId
+        FROM olap_data_model dm
+        LEFT JOIN olap_data_model_dimension dmd ON dmd.model_id = dm.id
+        JOIN olap_table_field_mapping map
+          ON map.table_id = dm.fact_table_id OR map.table_id = dmd.dim_table_id
+        JOIN olap_basic_pro basic ON map.basic_id = basic.id
+        WHERE
+        dm.status = 1
+        AND map.status = 1
+        AND basic.category = 2
+        AND basic.status = 2
+        <if test="modelIds != null and !modelIds.isEmpty()">
+            AND dm.id IN
+            <foreach collection="modelIds" index="index" item="item" open="(" separator="," close=")">
+                #{item}
+            </foreach>
+        </if>
+        <if test="modelIds == null or modelIds.isEmpty()">
+            AND 1 = 2
+        </if>
+    </select>
+</mapper>
