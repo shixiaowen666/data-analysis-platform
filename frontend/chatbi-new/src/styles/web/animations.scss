@@ -1,0 +1,314 @@
+/* ============================================================
+   动效库 · 克制原则
+   位移 ≤ 8px | 缩放 0.96~1.02 | 时长 180~320ms | 循环 1.4~2.4s
+   ============================================================ */
+
+/* ---------- 入场 ---------- */
+@keyframes fxFadeUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fxFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fxScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fxSlideRight {
+  from {
+    opacity: 0;
+    transform: translate3d(-6px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.fx-fade-up {
+  animation: fxFadeUp var(--dur-slow) var(--ease-out) both;
+}
+.fx-fade-in {
+  animation: fxFadeIn var(--dur-base) var(--ease-out) both;
+}
+.fx-scale-in {
+  animation: fxScaleIn var(--dur-base) var(--ease-out) both;
+}
+.fx-slide-right {
+  animation: fxSlideRight var(--dur-base) var(--ease-out) both;
+}
+
+/* 阶梯延迟 */
+@for $i from 1 through 10 {
+  .fx-d#{$i} {
+    animation-delay: #{($i - 1) * 55}ms;
+  }
+}
+
+/* ---------- 骨架扫光 ---------- */
+@keyframes fxShimmer {
+  0% {
+    background-position: -140% 0;
+  }
+  100% {
+    background-position: 240% 0;
+  }
+}
+
+.fx-shimmer {
+  background-image: linear-gradient(
+    100deg,
+    rgba(226, 236, 253, 0.55) 22%,
+    rgba(255, 255, 255, 0.92) 46%,
+    rgba(226, 236, 253, 0.55) 70%
+  );
+  background-size: 220% 100%;
+  animation: fxShimmer 1.6s var(--ease-inout) infinite;
+}
+
+/* ---------- 呼吸（AI 思考） ---------- */
+@keyframes fxBreath {
+  0%,
+  100% {
+    opacity: 0.42;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+.fx-breath {
+  animation: fxBreath 1.9s var(--ease-inout) infinite;
+}
+
+/* ---------- 顶部扫描线（步骤运行中） ---------- */
+@keyframes fxScan {
+  0% {
+    transform: translate3d(-100%, 0, 0);
+  }
+  100% {
+    transform: translate3d(300%, 0, 0);
+  }
+}
+
+.fx-scan-host {
+  position: relative;
+  overflow: hidden;
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 34%;
+    height: 2px;
+    border-radius: 2px;
+    background: linear-gradient(
+      90deg,
+      rgba(46, 107, 230, 0) 0%,
+      rgba(46, 107, 230, 0.75) 46%,
+      rgba(34, 184, 207, 0) 100%
+    );
+    animation: fxScan 1.5s var(--ease-inout) infinite;
+    pointer-events: none;
+    z-index: 2;
+  }
+}
+
+/* ---------- 打字机三点 ---------- */
+@keyframes fxTyping {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-2.5px);
+    opacity: 1;
+  }
+}
+
+/* ---------- 轨道旋转（Loader） ---------- */
+@keyframes fxSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fxSpinRev {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+/* ---------- 完成脉冲环 ---------- */
+@keyframes fxPulseRing {
+  0% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+}
+
+/* ---------- 背景光斑漂移 ---------- */
+@keyframes fxDriftA {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(3%, 2.5%, 0);
+  }
+}
+
+@keyframes fxDriftB {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(-2.5%, -2%, 0);
+  }
+}
+
+/* ---------- 高光横扫（背景） ---------- */
+@keyframes fxSweep {
+  0% {
+    transform: translate3d(-30%, 0, 0);
+    opacity: 0;
+  }
+  25%,
+  75% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: translate3d(130%, 0, 0);
+    opacity: 0;
+  }
+}
+
+/* ---------- 光标闪烁（流式输出） ---------- */
+@keyframes fxCaret {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.fx-caret::after {
+  content: '';
+  display: inline-block;
+  width: 2px;
+  height: 0.95em;
+  margin-left: 3px;
+  vertical-align: -0.12em;
+  border-radius: 1px;
+  background: var(--c-brand-500);
+  animation: fxCaret 1s steps(1) infinite;
+}
+
+/* ---------- 错误抖动（幅度 4px） ---------- */
+@keyframes fxShake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  22% {
+    transform: translateX(-4px);
+  }
+  46% {
+    transform: translateX(3px);
+  }
+  70% {
+    transform: translateX(-2px);
+  }
+  88% {
+    transform: translateX(1px);
+  }
+}
+
+.fx-shake {
+  animation: fxShake 0.36s var(--ease-inout);
+}
+
+/* ---------- 按压反馈 ---------- */
+.fx-press {
+  transition: transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+  &:active {
+    transform: scale(0.975);
+  }
+}
+
+/* ---------- 列表进入过渡（Vue transition-group） ---------- */
+.fx-list-enter-active,
+.fx-list-leave-active {
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+}
+.fx-list-enter,
+.fx-list-leave-to {
+  opacity: 0;
+  transform: translate3d(0, 5px, 0);
+}
+.fx-list-move {
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+/* ---------- 折叠展开 ---------- */
+.fx-collapse-enter-active,
+.fx-collapse-leave-active {
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+}
+.fx-collapse-enter,
+.fx-collapse-leave-to {
+  opacity: 0;
+  transform: translate3d(0, -4px, 0);
+}
+
+/* ---------- 无障碍降级 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.08ms !important;
+    scroll-behavior: auto !important;
+  }
+  .fx-shimmer,
+  .fx-breath,
+  .fx-scan-host::before {
+    animation: none !important;
+    opacity: 1;
+  }
+}

@@ -1,0 +1,112 @@
+/* ============================================================
+   设计令牌系统 Design Tokens
+   风格定位: 年轻明亮 · 轻科技感 · 精致高级 · 克制统一
+   参考: 智能问数YHZ.html + ease-ui.com (EASE UI) 设计语言
+   ============================================================ */
+
+:root {
+  /* ---------- 品牌色 (年轻明亮的蓝紫青系) ---------- */
+  --brand: #2b5cff;              /* 主品牌蓝: 比 #204ce9 更亮更年轻 */
+  --brand-hover: #1f4df0;
+  --brand-active: #1a41d6;
+  --brand-light: #eaf0ff;        /* 品牌浅底 */
+  --brand-lighter: #f4f7ff;
+  --accent-primary: #3b82f6;     /* 辅助亮蓝 */
+  --accent-cyan: #06b6d4;        /* 青色点缀 */
+  --accent-violet: #8b5cf6;      /* 紫色点缀 */
+  --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+  --brand-gradient: linear-gradient(135deg, #2b5cff 0%, #7c3aed 100%);
+
+  /* ---------- 功能色 ---------- */
+  --success: #10b981;
+  --success-bg: #ecfdf5;
+  --warning: #f59e0b;
+  --warning-bg: #fffbeb;
+  --danger: #ef4444;
+  --danger-bg: #fef2f2;
+  --info: #64748b;
+  --info-bg: #f1f5f9;
+
+  /* ---------- 中性色 / 文本 ---------- */
+  --text-primary: #1e293b;
+  --text-regular: #475569;
+  --text-secondary: #64748b;
+  --text-placeholder: #94a3b8;
+  --text-disabled: #cbd5e1;
+  --text-inverse: #ffffff;
+
+  /* ---------- 背景 ---------- */
+  --bg-page: #f4f6fb;            /* 页面底色: 亮灰蓝 */
+  --bg-card: #ffffff;
+  --bg-hover: #f8fafc;
+  --bg-section: #f8fafc;         /* 区块底 (ease-ui th 同款) */
+  --bg-deep: #eef2f9;
+  --bg-mask: rgba(15, 23, 42, 0.45);
+
+  /* ---------- 边框 ---------- */
+  --border-color: #e5eaf1;       /* ease-ui td border 同款 */
+  --border-strong: #d7e0ea;      /* ease-ui th border 同款 */
+  --border-light: #eef2f7;
+  --border-focus: #2b5cff;
+
+  /* ---------- 圆角 ---------- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 999px;
+
+  /* ---------- 阴影 ---------- */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.07), 0 2px 4px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 10px 30px rgba(15, 23, 42, 0.1), 0 4px 10px rgba(15, 23, 42, 0.05);
+  --shadow-brand: 0 4px 14px rgba(43, 92, 255, 0.28);
+  --shadow-focus: 0 0 0 3px rgba(43, 92, 255, 0.12);
+
+  /* ---------- 字体 ---------- */
+  --font-family: "Inter", "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei",
+    "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono",
+    Menlo, Courier, monospace;
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-base: 14px;
+  --fs-md: 15px;
+  --fs-lg: 16px;
+  --fs-xl: 18px;
+  --fs-2xl: 20px;
+  --fs-title: clamp(18px, 1.2vw + 10px, 22px);
+
+  /* ---------- 表格 (ease-ui 语言) ---------- */
+  --table-th-bg: #f8fafc;
+  --table-th-color: #66758a;
+  --table-th-border: #d7e0ea;
+  --shadow-card: 0 1px 3px rgba(30, 41, 59, 0.05), 0 1px 2px rgba(30, 41, 59, 0.03);
+  --table-td-color: #475569;
+  --table-border: #e5eaf1;
+  --table-row-hover: #f4f7ff;
+  --table-row-stripe: #fafbfd;
+
+  /* ---------- 代码 / SQL 主题 (亮色) ---------- */
+  --code-bg: #f6f8fb;
+  --code-border: #e2e8f0;
+  --code-gutter-bg: #eef2f7;
+  --code-gutter-color: #94a3b8;
+  --code-text: #334155;
+  --code-keyword: #7c3aed;
+  --code-function: #0369a1;
+  --code-string: #059669;
+  --code-number: #d97706;
+  --code-comment: #94a3b8;
+
+  /* ---------- 布局 ---------- */
+  --header-height: 56px;
+  --sidebar-width: 220px;
+  --chat-max-width: 980px;
+
+  /* ---------- 过渡 ---------- */
+  --tr-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --tr-base: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
