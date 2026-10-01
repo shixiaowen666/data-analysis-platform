@@ -76,6 +76,7 @@ export default {
     aiLogManager: () => import("@/views/aiLogManager"),
     promptManager: () => import("@/views/promptManager"),
     taskConfig: () => import("@/views/taskConfig"),
+    qualityManager: () => import("@/views/qualityManager"),
     
     //smartQuery: () => import('@/views/smartQuery'),
     //newBI: () => import('@/views/newBI'),

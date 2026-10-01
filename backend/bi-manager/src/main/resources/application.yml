@@ -116,3 +116,12 @@ jwt:
   secret: chatbi-jwt-secret-key-for-production-2026  # JWT签名密钥 (≥32字符)
   # token 过期时间 1天
   expiration: 86400000  # 令牌过期时间，单位为毫秒，即1天
+# 问答质量管理 · 自动调优：下游服务地址
+quality:
+  system-b-url: ${QUALITY_SYSTEM_B_URL:http://127.0.0.1:5000}
+  chat-server-url: ${QUALITY_CHAT_SERVER_URL:http://127.0.0.1:9099}
+  recall-url: ${QUALITY_RECALL_URL:http://127.0.0.1:5003}
+  # 验证执行线程池
+  verify-pool-size: 3
+  # 超级管理员（审批/发布/回滚/修改验证配置），逗号分隔
+  super-admins: ${QUALITY_SUPER_ADMINS:admin}

@@ -13,6 +13,7 @@ import com.chatbi.chat.feign.client.ResolverClient;
 import com.chatbi.chat.models.*;
 import com.chatbi.chat.service.AiBodyService;
 import com.chatbi.chat.service.MetadataService;
+import com.chatbi.chat.service.ChatTraceService;
 import com.chatbi.chat.service.ChatModelQAService;
 import com.chatbi.chat.service.DcarChatRecordService;
 import com.chatbi.chat.request.AIChatParam;
@@ -95,6 +96,9 @@ public class ChatQueryController {
 
     @Autowired
     private QueryTaskManager queryTaskManager;
+
+    @Resource
+    private ChatTraceService chatTraceService;
 
     @Operation(summary = "停止问话，结束query")
     @RequestMapping(value = "/chat/stop", method = RequestMethod.GET)
@@ -197,12 +201,19 @@ public class ChatQueryController {
                     log.info("**************************************************");
                     log.info("resolver请求报文:{}", resolverRequest);
                     long callStart = System.currentTimeMillis();
-                    ResultData resolverResult = resolverClient.analyze(resolverRequest);
+                    JSONObject resolverResult = resolverClient.analyze(resolverRequest);
                     long cost = System.currentTimeMillis() - callStart;
                     log.info("**************************************************");
                     log.info("**** 跨模块调用 结束: service-resolver.analyze, 耗时={}ms ****", cost);
                     log.info("**************************************************");
                     log.info("resolver响应结果:{}", JSON.toJSONString(resolverResult));
+                    // 问答质量管理：落 chat_analysis_trace（非致命）
+                    chatTraceService.saveAnalysisTrace(
+                            sessionVO.getChatSessionId(), chatVO.getChatId(), code,
+                            currentUser != null ? currentUser.getTenantId() : null,
+                            currentUser != null ? currentUser.getId() : null,
+                            currentUser != null ? currentUser.getUsername() : null,
+                            chatVO.getQuestion(), resolverRequest.getDatabaseMeta(), resolverResult, cost);
                 } catch (Throwable e) {
                     if (Thread.interrupted()) {
                         log.warn("bi/chat异步任务被终止, requestId:{}, chatSessionId:{}", requestId, sessionVO.getChatSessionId());

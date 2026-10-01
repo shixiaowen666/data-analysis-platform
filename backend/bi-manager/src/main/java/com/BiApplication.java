@@ -10,7 +10,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @SpringBootApplication
 @EnableDiscoveryClient
 @EnableFeignClients(basePackages = "com.common.feign")
-@MapperScan("com.bi.mapper,com.metadata.mapper")
+@MapperScan({"com.bi.mapper", "com.metadata.mapper", "com.quality.mapper"})
 @ServletComponentScan
 public class BiApplication {
 

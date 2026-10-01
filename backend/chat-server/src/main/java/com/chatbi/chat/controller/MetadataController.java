@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.LinkedHashMap;
@@ -31,6 +32,22 @@ public class MetadataController {
         data.put("available_dimensions", metadataService.buildAllDimensions());
         data.put("table_summaries", metadataService.buildAllTableSummaries());
         data.put("business_contexts", metadataService.buildAllBusinessContexts());
+        return CommonVo.Builder.SUCC().initSuccData(data);
+    }
+
+    /**
+     * 问答质量管理 · 调优：返回某智能体当前线上的 database_meta（与 biChat 传给 System B 的结构一致）。
+     * bi-manager 在草稿验证时取该 meta，按 tuning_change 做内存覆盖后传给 System B。
+     */
+    @Operation(summary = "查询智能体元数据", description = "与 analyze 请求体 database_meta 结构一致（available_metrics/available_dimensions/table_summaries/business_context）")
+    @RequestMapping(value = "/metadata/agent", method = RequestMethod.GET)
+    public CommonVo agentMetadata(@RequestParam("code") String code,
+                                  @RequestParam(value = "withIds", required = false, defaultValue = "false") boolean withIds) {
+        JSONObject data = new JSONObject(new LinkedHashMap<>());
+        data.put("available_metrics", metadataService.buildAgentIndicators(code));
+        data.put("available_dimensions", metadataService.buildAgentDimensions(code));
+        data.put("table_summaries", metadataService.buildAgentTableSummaries(code));
+        data.put("business_context", metadataService.buildAgentBusinessContext(code));
         return CommonVo.Builder.SUCC().initSuccData(data);
     }
 }

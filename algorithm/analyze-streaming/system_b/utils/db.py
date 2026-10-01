@@ -169,6 +169,20 @@ def ensure_user_operation_log_table():
                     "ADD COLUMN question VARCHAR(1024) NOT NULL DEFAULT '' AFTER log_path"
                 )
                 logger.info("[DB] Migrated user_operation_log: added question column")
+            # 问答质量管理：按 request_id（sessionId@chatId）回查日志
+            cursor.execute(
+                """SELECT COUNT(*) AS cnt FROM information_schema.COLUMNS
+                   WHERE TABLE_SCHEMA = DATABASE()
+                     AND TABLE_NAME = 'user_operation_log'
+                     AND COLUMN_NAME = 'request_id'"""
+            )
+            if cursor.fetchone()["cnt"] == 0:
+                cursor.execute(
+                    "ALTER TABLE user_operation_log "
+                    "ADD COLUMN request_id VARCHAR(128) NOT NULL DEFAULT '' AFTER question, "
+                    "ADD INDEX idx_request_id (request_id)"
+                )
+                logger.info("[DB] Migrated user_operation_log: added request_id column")
         conn.commit()
         logger.info("[DB] Ensured user_operation_log table exists")
     except Exception as exc:
@@ -180,7 +194,7 @@ def ensure_user_operation_log_table():
 
 def insert_operation_log(user_id: str, username: str, log_date: str,
                          log_path: str, question: str,
-                         created_at: str = "") -> bool:
+                         created_at: str = "", request_id: str = "") -> bool:
     """Insert one row per question. Returns True on success, False on failure (does not raise)."""
     conn = None
     try:
@@ -190,19 +204,40 @@ def insert_operation_log(user_id: str, username: str, log_date: str,
         username = str(username or "")[:128]
         user_id = str(user_id or "")[:64]
         log_path = str(log_path or "")[:512]
+        request_id = str(request_id or "")[:128]
         conn = get_connection()
         with conn.cursor() as cursor:
             cursor.execute(
                 """INSERT INTO user_operation_log
-                   (user_id, username, log_date, log_path, question, created_at, updated_at)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                (user_id, username, log_date, log_path, question, now, now),
+                   (user_id, username, log_date, log_path, question, request_id, created_at, updated_at)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                (user_id, username, log_date, log_path, question, request_id, now, now),
             )
         conn.commit()
         return True
     except Exception as exc:
         logger.exception(f"[DB] Failed to upsert operation log: {exc}")
         return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def get_operation_log_by_request_id(request_id: str) -> Optional[dict]:
+    """问答质量管理：按 request_id 查最近一条日志记录。"""
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT * FROM user_operation_log WHERE request_id = %s "
+                "ORDER BY id DESC LIMIT 1",
+                (request_id,),
+            )
+            return cursor.fetchone()
+    except Exception as exc:
+        logger.exception(f"[DB] Failed to get operation log by request_id: {exc}")
+        return None
     finally:
         if conn:
             conn.close()

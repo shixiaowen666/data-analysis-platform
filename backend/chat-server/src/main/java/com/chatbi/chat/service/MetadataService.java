@@ -27,4 +27,7 @@ public interface MetadataService {
 
     /** 全量知识库条目（ai_body_id + knowledge_element） */
     JSONArray buildAllBusinessContexts();
+
+    /** 智能体知识库拼接文本（与 biChat 传给 System B 的 business_context 一致） */
+    String buildAgentBusinessContext(String code);
 }

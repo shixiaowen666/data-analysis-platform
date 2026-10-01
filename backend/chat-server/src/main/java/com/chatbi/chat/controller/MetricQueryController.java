@@ -7,6 +7,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.chatbi.chat.config.PagingProperties;
 import com.chatbi.chat.constant.OperatorConverter;
 import com.chatbi.chat.entity.OlapBasicPro;
+import com.chatbi.chat.entity.ChatStepTrace;
 import com.chatbi.chat.entity.OlapReportGroup;
 import com.chatbi.chat.enums.ErrorMessageEnum;
 import com.chatbi.chat.enums.ResultCode;
@@ -49,6 +50,9 @@ import java.util.stream.Collectors;
 @RequestMapping({"/api/chat-server"})
 @Slf4j
 public class MetricQueryController {
+
+    @Resource
+    private com.chatbi.chat.service.ChatTraceService chatTraceService;
 
     @Autowired
     private QueryServerClient queryServerClient;
@@ -418,6 +422,9 @@ public class MetricQueryController {
         List<OlapBasicPro> basicProList;
         QueryDataRequest queryDataRequest = new QueryDataRequest();
         QueryDataResponse<GetDataSqlResponse> queryDataResponse = null;
+        // 问答质量管理：step trace 证据
+        long stepTraceStart = System.currentTimeMillis();
+        Long traceResolvedTableId = null;
 
         // time_range 两种路径都解析（必须在 if-else 之前，因为 else 分支内会调 data-server）
         if (param.get("time_range") != null) {
@@ -433,6 +440,7 @@ public class MetricQueryController {
             // 校验 expected_table 与维度的匹配关系，处理 org 维度互斥替换
             String expectedTable = param.get("expected_table") != null ? param.get("expected_table").toString() : "";
             Long resolvedTableId = resolveTableColumns(expectedColumns, expectedColumnNames, expectedTable, queryFilters);
+            traceResolvedTableId = resolvedTableId;
 
             // 按english_name查olap_basic_pro，区分维度和指标
             basicProList = new ArrayList<>(olapBasicProService.getBasicProByName(expectedColumnNames));
@@ -592,6 +600,43 @@ public class MetricQueryController {
         //更新历史
         String stepType="query";
         olapDataService.updateChatRecord(chatVO,dataRequestDTO,queryDataResponse, stepType);
+
+        // 问答质量管理：落 chat_step_trace（非致命）
+        try {
+            ChatStepTrace st = new ChatStepTrace();
+            st.setChatId(chatId);
+            st.setStepId(stepId);
+            st.setQueryDescription(StringUtils.abbreviate(queryDescription, 1000));
+            Object expectedTableObj = param.get("expected_table");
+            st.setExpectedTable(expectedTableObj == null ? null : expectedTableObj.toString());
+            st.setExpectedColumns(JSON.toJSONString(param.get("expected_columns")));
+            st.setResolvedTableId(traceResolvedTableId);
+            if (traceResolvedTableId != null) {
+                st.setResolvedTableName(expectedTableObj == null ? null : expectedTableObj.toString());
+            }
+            st.setResolvedIndicatorIds(JSON.toJSONString(idxs.stream().map(IndexDTO::getId).collect(Collectors.toList())));
+            st.setResolvedIndicatorNames(JSON.toJSONString(idxs.stream().map(IndexDTO::getIndName).collect(Collectors.toList())));
+            st.setResolvedDimensionIds(JSON.toJSONString(dims.stream().map(DimDTO::getId).collect(Collectors.toList())));
+            st.setResolvedDimensionNames(JSON.toJSONString(dims.stream().map(DimDTO::getDimName).collect(Collectors.toList())));
+            Set<String> matched = basicProList.stream().map(OlapBasicPro::getEnglishName).collect(Collectors.toSet());
+            List<String> unmatched = expectedColumnNames.stream().filter(n -> !matched.contains(n)).collect(Collectors.toList());
+            st.setUnmatchedColumns(JSON.toJSONString(unmatched));
+            st.setFilters(JSON.toJSONString(queryFilters));
+            st.setTimeRange(queryDataRequest.getTimeRange() == null ? null : JSON.toJSONString(queryDataRequest.getTimeRange()));
+            st.setGroupExpanded(groupExpandedPros.isEmpty() ? 0 : 1);
+            st.setElapsedMs((int) (System.currentTimeMillis() - stepTraceStart));
+            if (queryDataResponse != null && queryDataResponse.getCode() == 200 && queryDataResponse.getData() != null) {
+                st.setSqlText(queryDataResponse.getData().getSql());
+                st.setRowCount(queryDataResponse.getData().getRecords() == null ? 0 : queryDataResponse.getData().getRecords().size());
+            } else if (queryDataResponse != null) {
+                st.setErrorMessage(StringUtils.abbreviate(queryDataResponse.getMessage(), 1000));
+            } else if (!expectedColumnNames.isEmpty()) {
+                st.setErrorMessage("data-server响应为空");
+            }
+            chatTraceService.saveStepTrace(st);
+        } catch (Exception traceErr) {
+            log.warn("[trace] step trace build failed (non-fatal): {}", traceErr.getMessage());
+        }
 
         JSONObject resultObj=new JSONObject();
         log.info("[data-server] {}", DS_SEP);

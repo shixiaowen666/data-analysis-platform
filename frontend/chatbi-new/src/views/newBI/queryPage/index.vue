@@ -1710,6 +1710,19 @@
               </el-collapse>
             </div>
           </div>
+          <!-- 问答质量管理：收到 close 后在答案卡片底部出现 👍 👎 -->
+          <div
+            v-if="turn.status === 'done' && turn.chatId && turn.steps && turn.steps.length"
+            style="text-align: left; margin: 2px 0 0 44px"
+          >
+            <feedback-bar
+              :chatSessionId="sessionId"
+              :chatId="turn.chatId"
+              :aiBodyCode="currentAgent && currentAgent.code"
+              :question="turn.user && turn.user.text"
+              :answer="lastAnswerOf(turn)"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -1836,6 +1849,7 @@ import welcomePage from "@/views/newBI/welcomePage";
 import questionPage from "@/views/newBI/questionPage";
 import composerPage from "@/views/newBI/composerPage";
 import thinkPage from "@/views/newBI/thinkPage";
+import feedbackBar from "@/views/newBI/feedbackBar";
 
 export default {
   name: "queryPage",
@@ -1848,6 +1862,7 @@ export default {
     welcomePage,
     composerPage,
     questionPage,
+    feedbackBar,
   },
   data() {
     return {
@@ -1988,6 +2003,12 @@ export default {
         itemId,
         `计算导出_${formatDateTime()}.xlsx`
       );
+    },
+
+    lastAnswerOf(turn) {
+      const s = (turn.steps || []).filter((x) => x.stepType === "summarize" || x.stepType === "analyze");
+      const last = s.length ? s[s.length - 1] : null;
+      return last && last.answer ? String(last.answer) : "";
     },
 
     downAnalyzeFile(chatSessionId, chatId, itemId) {
