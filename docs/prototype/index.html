@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>问答质量管理 - 原型</title>
+<link rel="stylesheet" href="./vendor/element-ui.css">
+<link rel="stylesheet" href="./prototype.css">
+</head>
+<body>
+<div id="app">
+  <!-- 顶部导航 -->
+  <div class="proto-topnav">
+    <div class="brand"><span class="logo">智</span> 智能问数平台 <span class="proto-tag">原型 v0.1</span></div>
+    <el-menu :default-active="page" mode="horizontal" @select="go" background-color="transparent" text-color="#64748b" active-text-color="#2b5cff" class="proto-menu">
+      <el-menu-item index="chat">① 用户问数页（反馈入口）</el-menu-item>
+      <el-menu-item index="mobile">② 移动端反馈</el-menu-item>
+      <el-menu-item index="feedback">③ 反馈列表</el-menu-item>
+      <el-menu-item index="sessions">④ 问答诊断列表</el-menu-item>
+      <el-menu-item index="diagnosis">⑤ 诊断定位页</el-menu-item>
+      <el-menu-item index="stats">⑥ 质量统计</el-menu-item>
+      <el-menu-item index="flow">⑦ 流程与字典</el-menu-item>
+      <el-menu-item index="tuning">⑧ 调优任务</el-menu-item>
+      <el-menu-item index="tuningDetail">⑨ 调优详情</el-menu-item>
+      <el-menu-item index="verify">⑩ 验证报告</el-menu-item>
+      <el-menu-item index="approval">⑪ 审批中心</el-menu-item>
+      <el-menu-item index="settings">⑫ 设置</el-menu-item>
+    </el-menu>
+  </div>
+
+  <!-- ===================== ① 用户问数页 ===================== -->
+  <div v-show="page==='chat'" class="proto-page chat-page">
+    <div class="chat-side">
+      <div class="side-title">历史会话</div>
+      <div v-for="s in sessions.slice(0,6)" :key="s.chatId" class="side-item" :class="{active:s.chatId===current.chatId}">
+        <div class="q">{{ s.question }}</div>
+        <div class="meta">{{ s.time }}<el-tag v-if="s.feedback" size="mini" :type="s.feedback.rating===1?'success':'danger'" effect="plain" style="margin-left:6px">{{ s.feedback.rating===1?'已赞':'已踩' }}</el-tag></div>
+      </div>
+    </div>
+    <div class="chat-main">
+      <div class="chat-header">
+        <span class="agent">🤖 深圳供电局运营分析智能体</span>
+        <span class="hint">回答完成后，可对本轮结果进行反馈</span>
+      </div>
+      <div class="chat-scroll">
+        <!-- 用户问题 -->
+        <div class="bubble user"><div class="avatar">张</div><div class="content">{{ current.question }}</div></div>
+        <!-- AI 回答 -->
+        <div class="bubble ai">
+          <div class="avatar ai">AI</div>
+          <div class="content">
+            <div class="think-line"><i class="el-icon-loading" v-if="false"></i>💡 已完成分析，共 {{ current.steps.length }} 个步骤，耗时 {{ current.elapsed }}s</div>
+            <el-collapse v-model="openSteps" class="steps">
+              <el-collapse-item v-for="st in current.steps" :key="st.stepId" :name="st.stepId">
+                <template slot="title">
+                  <el-tag size="mini" :type="stepTagType(st.type)" effect="dark" style="margin-right:8px">{{ stepTypeZh(st.type) }}</el-tag>
+                  <span class="step-title">{{ st.stepId }} · {{ st.description }}</span>
+                </template>
+                <div v-if="st.type==='query'" class="step-body">
+                  <div class="tbl-hint">数据来源：<code>{{ st.table }}</code> · {{ st.rowCount }} 行</div>
+                  <el-table :data="st.rows" size="mini" border max-height="180">
+                    <el-table-column v-for="c in st.columns" :key="c" :prop="c" :label="c" min-width="110"></el-table-column>
+                  </el-table>
+                </div>
+                <div v-else-if="st.type==='compute'" class="step-body">
+                  <div class="tbl-hint">计算函数：<code>{{ st.func }}</code></div>
+                  <el-table :data="st.rows" size="mini" border max-height="180">
+                    <el-table-column v-for="c in st.columns" :key="c" :prop="c" :label="c" min-width="110"></el-table-column>
+                  </el-table>
+                </div>
+                <div v-else class="step-body summary">{{ st.text }}</div>
+              </el-collapse-item>
+            </el-collapse>
+            <div class="answer">{{ current.answer }}</div>
+
+            <!-- 反馈条 -->
+            <div class="feedback-bar">
+              <span class="fb-label">这个回答对你有帮助吗？</span>
+              <el-button size="mini" :type="myFeedback.rating===1?'success':''" round @click="thumbUp"><i class="el-icon-top"></i> 有帮助</el-button>
+              <el-button size="mini" :type="myFeedback.rating===-1?'danger':''" round @click="openFeedback"><i class="el-icon-bottom"></i> 结果有误</el-button>
+              <span v-if="myFeedback.rating===-1" class="fb-summary">
+                已反馈：<el-tag v-for="c in myFeedback.errorTypes" :key="c" size="mini" type="danger" effect="plain" style="margin-right:4px">{{ dictName(c) }}</el-tag>
+                <el-link type="primary" :underline="false" @click="openFeedback" style="font-size:12px">修改</el-link>
+              </span>
+              <span v-if="myFeedback.rating===1" class="fb-summary">感谢反馈 👍</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input">
+        <el-input placeholder="请输入你想了解的数据问题，例如：深圳各区局7月线损率排名" disabled></el-input>
+        <el-button type="primary" disabled>发送</el-button>
+      </div>
+    </div>
+
+    <!-- 反馈弹窗 -->
+    <el-dialog title="反馈：结果有误" :visible.sync="fbDialog" width="560px" append-to-body>
+      <div class="fb-q"><span class="lbl">本轮问题</span>{{ current.question }}</div>
+      <el-form label-position="top" size="small">
+        <el-form-item>
+          <template slot="label">错误类型 <span class="req">*</span> <span class="sub">（可多选）</span></template>
+          <el-checkbox-group v-model="fbForm.errorTypes" class="err-chips">
+            <el-checkbox-button v-for="d in userErrorTypes" :key="d.code" :label="d.code">{{ d.name }}</el-checkbox-button>
+          </el-checkbox-group>
+          <div class="chip-desc" v-if="fbForm.errorTypes.length">
+            <div v-for="c in fbForm.errorTypes" :key="c">· <b>{{ dictName(c) }}</b>：{{ dictHint(c) }}</div>
+          </div>
+        </el-form-item>
+        <el-form-item>
+          <template slot="label">错误描述 <span class="sub">（选填，{{ fbForm.description.length }}/500）</span></template>
+          <el-input type="textarea" :rows="4" maxlength="500" v-model="fbForm.description"
+            :placeholder="fbForm.errorTypes.includes('RESULT') ? '选择了「结果错误」，请尽量描述：你期望的结果是什么？实际返回哪里不对？' : '例如：应该查的是「分压线损率」而不是「分区线损率」；7月的数据不应该包含8月1日…'"></el-input>
+        </el-form-item>
+        <el-alert type="info" :closable="false" show-icon title="你的反馈将进入管理端「问答质量管理」，由数据管理员进行错误定位与修复。"></el-alert>
+      </el-form>
+      <span slot="footer">
+        <el-button size="small" @click="fbDialog=false">取消</el-button>
+        <el-button size="small" type="primary" :disabled="!fbForm.errorTypes.length" @click="submitFeedback">提交反馈</el-button>
+      </span>
+    </el-dialog>
+  </div>
+
+  <!-- ===================== ② 移动端 ===================== -->
+  <div v-show="page==='mobile'" class="proto-page mobile-page">
+    <div class="phone">
+      <div class="phone-bar">9:41 <span style="float:right">📶 🔋</span></div>
+      <div class="phone-head">‹ 智能问数</div>
+      <div class="phone-body">
+        <div class="m-bubble user">{{ current.question }}</div>
+        <div class="m-bubble ai">
+          <div class="m-answer">{{ current.answer }}</div>
+          <div class="m-fb">
+            <span :class="{on:myFeedback.rating===1}" @click="thumbUp">👍 有帮助</span>
+            <span :class="{on:myFeedback.rating===-1}" @click="mSheet=true">👎 结果有误</span>
+          </div>
+        </div>
+      </div>
+      <div class="phone-input">请输入问题…</div>
+      <!-- ActionSheet -->
+      <transition name="el-fade-in">
+      <div v-if="mSheet" class="m-mask" @click.self="mSheet=false">
+        <div class="m-sheet">
+          <div class="m-sheet-title">结果有误 · 请选择错误类型 <span class="close" @click="mSheet=false">✕</span></div>
+          <div class="m-chips">
+            <span v-for="d in userErrorTypes" :key="d.code" :class="{on:fbForm.errorTypes.includes(d.code)}" @click="toggleType(d.code)">{{ d.name }}</span>
+          </div>
+          <textarea class="m-textarea" v-model="fbForm.description" placeholder="错误描述（选填）"></textarea>
+          <div class="m-submit" :class="{dis:!fbForm.errorTypes.length}" @click="fbForm.errorTypes.length && submitFeedback(true)">提交反馈</div>
+        </div>
+      </div>
+      </transition>
+    </div>
+    <div class="mobile-note">
+      <h4>移动端说明</h4>
+      <ul>
+        <li>入口与 PC 一致：回答完成后出现 👍 / 👎</li>
+        <li>👎 使用 Vant <code>ActionSheet</code> 底部弹层，错误类型为 chip 多选</li>
+        <li>错误描述 <code>Field(type=textarea)</code>，选填</li>
+        <li>调用同一接口 <code>POST /api/v1/chat/feedback</code></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ===================== ③ 反馈列表 ===================== -->
+  <div v-show="page==='feedback'" class="proto-page admin-page">
+    <div class="admin-side">
+      <div class="side-group">数据管理</div>
+      <div class="side-item">数据源管理</div><div class="side-item">字段映射管理</div><div class="side-item">指标管理</div><div class="side-item">维度管理</div>
+      <div class="side-group">智能问数</div>
+      <div class="side-item">智能体管理</div><div class="side-item">推荐问题</div><div class="side-item">AI日志管理</div>
+      <div class="side-item active">问答质量管理 <el-badge :value="pendingCount" class="side-badge"></el-badge></div>
+      <div class="side-item">提示词管理</div>
+    </div>
+    <div class="admin-main">
+      <div class="page-title">问答质量管理</div>
+      <el-tabs v-model="adminTab" @tab-click="onAdminTab">
+        <el-tab-pane label="用户反馈" name="feedback"></el-tab-pane>
+        <el-tab-pane label="问答诊断" name="sessions"></el-tab-pane>
+        <el-tab-pane label="调优任务" name="tuning"></el-tab-pane>
+        <el-tab-pane label="回归测试集" name="regression" disabled></el-tab-pane>
+        <el-tab-pane label="质量统计" name="stats"></el-tab-pane>
+        <el-tab-pane label="设置" name="settings"></el-tab-pane>
+      </el-tabs>
+      <div class="search-box">
+        <el-select v-model="fq.agent" placeholder="全部智能体" size="small" style="width:180px" clearable><el-option label="深圳供电局运营分析智能体" value="a1"></el-option><el-option label="线损管理智能体" value="a2"></el-option></el-select>
+        <el-select v-model="fq.type" placeholder="全部错误类型" size="small" style="width:150px;margin-left:8px" clearable><el-option v-for="d in userErrorTypes" :key="d.code" :label="d.name" :value="d.code"></el-option></el-select>
+        <el-select v-model="fq.status" placeholder="全部状态" size="small" style="width:130px;margin-left:8px" clearable><el-option label="待处理" :value="0"></el-option><el-option label="已定位" :value="1"></el-option><el-option label="已修复" :value="2"></el-option><el-option label="已忽略" :value="3"></el-option></el-select>
+        <el-date-picker type="daterange" size="small" style="width:240px;margin-left:8px" placeholder="反馈时间" v-model="fq.range"></el-date-picker>
+        <el-input placeholder="搜索问题 / 反馈人 / 描述" size="small" suffix-icon="el-icon-search" style="width:240px;margin-left:8px" v-model="fq.kw"></el-input>
+        <div style="flex:1"></div>
+        <el-button size="small">导出</el-button>
+      </div>
+      <div class="stat-strip">
+        <div class="stat"><div class="n">{{ feedbacks.length }}</div><div class="l">反馈总数</div></div>
+        <div class="stat warn"><div class="n">{{ pendingCount }}</div><div class="l">待处理</div></div>
+        <div class="stat"><div class="n">{{ feedbacks.filter(f=>f.status===1).length }}</div><div class="l">已定位</div></div>
+        <div class="stat ok"><div class="n">{{ feedbacks.filter(f=>f.status===2).length }}</div><div class="l">已修复</div></div>
+        <div class="stat"><div class="n">72%</div><div class="l">7日处理率</div></div>
+      </div>
+      <el-table :data="filteredFeedbacks" border size="small" class="normal-table" @row-click="r=>openDiagnosis(r.chatId)" style="cursor:pointer">
+        <el-table-column label="反馈时间" prop="time" width="150"></el-table-column>
+        <el-table-column label="反馈人" prop="user" width="90"></el-table-column>
+        <el-table-column label="智能体" prop="agent" width="170" show-overflow-tooltip></el-table-column>
+        <el-table-column label="问题" prop="question" min-width="240" show-overflow-tooltip></el-table-column>
+        <el-table-column label="用户选择的错误类型" width="240">
+          <template slot-scope="{row}"><el-tag v-for="c in row.errorTypes" :key="c" size="mini" type="danger" effect="plain" style="margin-right:4px">{{ dictName(c) }}</el-tag></template>
+        </el-table-column>
+        <el-table-column label="错误描述" prop="description" min-width="200" show-overflow-tooltip></el-table-column>
+        <el-table-column label="管理员定位" width="130">
+          <template slot-scope="{row}"><el-tag v-if="row.diagnosis" size="mini" type="warning">{{ dictName(row.diagnosis.primary) }}</el-tag><span v-else class="muted">—</span></template>
+        </el-table-column>
+        <el-table-column label="状态" width="90">
+          <template slot-scope="{row}"><el-tag size="mini" :type="statusType(row.status)">{{ statusName(row.status) }}</el-tag></template>
+        </el-table-column>
+        <el-table-column label="操作" width="140" fixed="right">
+          <template slot-scope="{row}">
+            <el-link type="primary" :underline="false" @click.stop="openDiagnosis(row.chatId)">{{ row.status===0?'去定位':'查看' }}</el-link>
+            <el-link v-if="row.status===0" type="info" :underline="false" style="margin-left:10px" @click.stop="row.status=3">忽略</el-link>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div class="pager"><el-pagination layout="total, prev, pager, next, sizes" :total="filteredFeedbacks.length" :page-size="20" small></el-pagination></div>
+    </div>
+  </div>
+
+  <!-- ===================== ④ 问答诊断列表 ===================== -->
+  <div v-show="page==='sessions'" class="proto-page admin-page">
+    <div class="admin-side">
+      <div class="side-group">智能问数</div>
+      <div class="side-item">智能体管理</div><div class="side-item">AI日志管理</div>
+      <div class="side-item active">问答质量管理</div>
+    </div>
+    <div class="admin-main">
+      <div class="page-title">问答质量管理</div>
+      <el-tabs v-model="adminTab" @tab-click="onAdminTab">
+        <el-tab-pane label="用户反馈" name="feedback"></el-tab-pane>
+        <el-tab-pane label="问答诊断" name="sessions"></el-tab-pane>
+        <el-tab-pane label="调优任务" name="tuning"></el-tab-pane>
+        <el-tab-pane label="回归测试集" name="regression" disabled></el-tab-pane>
+        <el-tab-pane label="质量统计" name="stats"></el-tab-pane>
+        <el-tab-pane label="设置" name="settings"></el-tab-pane>
+      </el-tabs>
+      <div class="search-box">
+        <el-radio-group v-model="sq.quick" size="small">
+          <el-radio-button label="all">全部会话</el-radio-button>
+          <el-radio-button label="fb">有用户反馈</el-radio-button>
+          <el-radio-button label="fail">执行失败</el-radio-button>
+          <el-radio-button label="undiag">未定位</el-radio-button>
+          <el-radio-button label="unfix">已定位未修复</el-radio-button>
+        </el-radio-group>
+        <el-select v-model="fq.agent" placeholder="全部智能体" size="small" style="width:180px;margin-left:8px" clearable></el-select>
+        <el-date-picker v-model="fq.range" type="daterange" size="small" style="width:240px;margin-left:8px" placeholder="提问时间"></el-date-picker>
+        <el-input v-model="fq.kw" placeholder="搜索问题 / 提问人" size="small" suffix-icon="el-icon-search" style="width:220px;margin-left:8px"></el-input>
+      </div>
+      <el-table :data="filteredSessions" border size="small" class="normal-table" @row-click="r=>openDiagnosis(r.chatId)" style="cursor:pointer">
+        <el-table-column label="提问时间" prop="time" width="150"></el-table-column>
+        <el-table-column label="提问人" prop="user" width="90"></el-table-column>
+        <el-table-column label="智能体" prop="agent" width="170" show-overflow-tooltip></el-table-column>
+        <el-table-column label="问题" prop="question" min-width="260" show-overflow-tooltip></el-table-column>
+        <el-table-column label="执行状态" width="100">
+          <template slot-scope="{row}"><el-tag size="mini" :type="row.status==='success'?'success':row.status==='partial'?'warning':'danger'" effect="plain">{{ {success:'成功',partial:'部分失败',failure:'失败'}[row.status] }}</el-tag></template>
+        </el-table-column>
+        <el-table-column label="步骤" width="70" align="center"><template slot-scope="{row}">{{ row.steps.length }}</template></el-table-column>
+        <el-table-column label="耗时" width="70" align="center"><template slot-scope="{row}">{{ row.elapsed }}s</template></el-table-column>
+        <el-table-column label="用户反馈" width="130">
+          <template slot-scope="{row}">
+            <span v-if="!row.feedback" class="muted">—</span>
+            <el-tag v-else-if="row.feedback.rating===1" size="mini" type="success" effect="plain">👍 有帮助</el-tag>
+            <el-tooltip v-else :content="row.feedback.errorTypes.map(dictName).join('、')"><el-tag size="mini" type="danger" effect="plain">👎 {{ row.feedback.errorTypes.length }} 类错误</el-tag></el-tooltip>
+          </template>
+        </el-table-column>
+        <el-table-column label="自动预判" width="150">
+          <template slot-scope="{row}">
+            <el-tag v-for="h in autoHints(row)" :key="h" size="mini" type="warning" effect="plain" style="margin-right:3px">{{ dictName(h) }}</el-tag>
+            <span v-if="!autoHints(row).length" class="muted">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="定位结论" width="130">
+          <template slot-scope="{row}"><el-tag v-if="row.diagnosis" size="mini" type="warning">{{ dictName(row.diagnosis.primary) }}</el-tag><span v-else class="muted">未定位</span></template>
+        </el-table-column>
+        <el-table-column label="修复状态" width="90">
+          <template slot-scope="{row}"><el-tag v-if="row.diagnosis" size="mini" :type="['info','success','success'][row.diagnosis.fixStatus]">{{ ['待修复','已修复','已验证'][row.diagnosis.fixStatus] }}</el-tag><span v-else class="muted">—</span></template>
+        </el-table-column>
+        <el-table-column label="操作" width="80" fixed="right"><template slot-scope="{row}"><el-link type="primary" :underline="false" @click.stop="openDiagnosis(row.chatId)">诊断</el-link></template></el-table-column>
+      </el-table>
+      <div class="pager"><el-pagination layout="total, prev, pager, next, sizes" :total="filteredSessions.length" :page-size="20" small></el-pagination></div>
+    </div>
+  </div>
+
+  <!-- ===================== ⑤ 诊断定位页 ===================== -->
+  <div v-show="page==='diagnosis'" class="proto-page diag-page" v-if="diag">
+    <div class="diag-head">
+      <el-page-header @back="go('sessions')" content="问答诊断"></el-page-header>
+      <div class="diag-meta">
+        <span><b>chatId</b> {{ diag.chatId }}</span>
+        <span><b>提问人</b> {{ diag.user }}</span>
+        <span><b>智能体</b> {{ diag.agent }}</span>
+        <span><b>时间</b> {{ diag.time }}</span>
+        <span><b>模型</b> {{ diag.trace.model }}</span>
+        <span><b>提示词</b> {{ diag.trace.promptVersion }}</span>
+        <el-tag size="mini" :type="diag.status==='success'?'success':'danger'" effect="plain">{{ {success:'执行成功',partial:'部分失败',failure:'执行失败'}[diag.status] }}</el-tag>
+      </div>
+    </div>
+    <div class="diag-body">
+      <!-- 左：问答回放 -->
+      <div class="diag-col left">
+        <div class="col-title">问答回放</div>
+        <div class="card">
+          <div class="card-h">原问题</div>
+          <div class="q-text">{{ diag.question }}</div>
+        </div>
+        <div class="card" v-if="diag.feedback">
+          <div class="card-h">用户反馈 <el-tag size="mini" :type="statusType(diag.feedback.status)" style="float:right">{{ statusName(diag.feedback.status) }}</el-tag></div>
+          <div class="fb-line"><span :class="diag.feedback.rating===1?'ok':'bad'">{{ diag.feedback.rating===1?'👍 有帮助':'👎 结果有误' }}</span> · {{ diag.feedback.user }} · {{ diag.feedback.time }}</div>
+          <div class="fb-tags"><el-tag v-for="c in diag.feedback.errorTypes" :key="c" size="mini" type="danger" effect="plain">{{ dictName(c) }}</el-tag></div>
+          <div class="fb-desc" v-if="diag.feedback.description">“{{ diag.feedback.description }}”</div>
+        </div>
+        <div class="card" v-else><div class="card-h">用户反馈</div><div class="muted">无用户反馈（管理员主动巡检）</div></div>
+        <div class="card">
+          <div class="card-h">各步骤结果</div>
+          <div v-for="st in diag.steps" :key="st.stepId" class="replay-step" :class="{err: st.status==='failed', focus: diagForm.errorStepId===st.stepId}" @click="diagForm.errorStepId=st.stepId">
+            <div class="rs-h"><el-tag size="mini" :type="stepTagType(st.type)" effect="dark">{{ stepTypeZh(st.type) }}</el-tag> <b>{{ st.stepId }}</b> <span class="muted">{{ st.description }}</span><i v-if="st.status==='failed'" class="el-icon-warning" style="color:#ef4444;margin-left:4px"></i></div>
+            <el-table v-if="st.rows" :data="st.rows" size="mini" border max-height="140"><el-table-column v-for="c in st.columns" :key="c" :prop="c" :label="c" min-width="100"></el-table-column></el-table>
+            <div v-else-if="st.text" class="rs-text">{{ st.text }}</div>
+            <div v-else-if="st.error" class="rs-err">{{ st.error }}</div>
+          </div>
+        </div>
+        <div class="card"><div class="card-h">最终答案</div><div class="answer-text">{{ diag.answer }}</div></div>
+      </div>
+
+      <!-- 中：链路追踪 -->
+      <div class="diag-col mid">
+        <div class="col-title">链路追踪 <span class="sub">按执行顺序，哪一环对不上就选对应错误类型 →</span></div>
+
+        <div class="trace-block">
+          <div class="tb-h"><span class="num">①</span> 元数据召回 <el-tag size="mini" effect="plain" style="margin-left:6px">{{ diag.trace.recall.enabled?'已启用':'未启用' }}</el-tag><span class="tb-r">{{ diag.trace.recall.elapsed }}ms · {{ diag.trace.recall.metaBefore }} → <b>{{ diag.trace.recall.metaAfter }}</b> 张表</span>
+            <el-link type="danger" :underline="false" class="tb-link" @click="pick('TABLE_SELECT')">判为选表错误</el-link></div>
+          <div class="tb-body">
+            <div class="kv"><span class="k">召回表</span><span class="v"><code v-for="t in diag.trace.recall.tables" :key="t" :class="{hit: diag.trace.usedTables.includes(t)}">{{ t }}</code></span></div>
+            <div class="kv"><span class="k">召回指标</span><span class="v small">{{ diag.trace.recall.metrics.join('、') }}</span></div>
+            <div class="kv"><span class="k">召回维度</span><span class="v small">{{ diag.trace.recall.dims.join('、') }}</span></div>
+            <div class="legend"><code class="hit">绿色</code> = 拆解实际使用 · <el-link type="primary" :underline="false" style="font-size:12px" @click="metaDialog=true">查看送入模型的完整元数据</el-link></div>
+          </div>
+        </div>
+
+        <div class="trace-block">
+          <div class="tb-h"><span class="num">②</span> 问题拆解 <span class="tb-r">{{ diag.steps.length }} 步 · 重试 {{ diag.trace.decomposeRetries }} 次</span>
+            <el-link type="danger" :underline="false" class="tb-link" @click="pick('INTENT')">判为意图错误</el-link>
+            <el-link type="danger" :underline="false" class="tb-link" @click="pick('DECOMPOSE')">判为拆分错误</el-link></div>
+          <div class="tb-body">
+            <div class="kv"><span class="k">识别时间</span><span class="v"><code>{{ diag.trace.timeRange }}</code> <span class="muted">（当前日期 {{ diag.trace.currentDate }}）</span></span></div>
+            <div class="dag">
+              <div v-for="st in diag.steps" :key="st.stepId" class="dag-node" :class="[st.type, {err:st.status==='failed', focus: diagForm.errorStepId===st.stepId}]" @click="diagForm.errorStepId=st.stepId">
+                <div class="dn-h">{{ st.stepId }} <span class="dn-t">{{ stepTypeZh(st.type) }}</span><span v-if="st.dependsOn && st.dependsOn.length" class="dn-dep">← {{ st.dependsOn.join(',') }}</span></div>
+                <div class="dn-d">{{ st.description }}</div>
+                <div class="dn-p" v-if="st.type==='query'">表 <code>{{ st.table }}</code></div>
+                <div class="dn-p" v-if="st.type==='compute'">函数 <code>{{ st.func }}</code> <span class="muted">{{ st.params }}</span></div>
+                <div class="dn-e" v-if="st.status==='failed'">✕ {{ st.error }}</div>
+              </div>
+            </div>
+            <el-link type="primary" :underline="false" style="font-size:12px" @click="jsonDialog=true">查看拆解 JSON 原文</el-link>
+          </div>
+        </div>
+
+        <div class="trace-block">
+          <div class="tb-h"><span class="num">③</span> 取数映射 <span class="tb-r">{{ diag.trace.stepTraces.length }} 个 query 步骤</span>
+            <el-link type="danger" :underline="false" class="tb-link" @click="pick('METRIC_DIM')">判为指标/维度错误</el-link></div>
+          <div class="tb-body">
+            <div v-for="q in diag.trace.stepTraces" :key="q.stepId" class="qtrace" :class="{focus: diagForm.errorStepId===q.stepId}">
+              <div class="qt-h"><b>{{ q.stepId }}</b> <span class="muted">{{ q.queryDescription }}</span><span class="tb-r">{{ q.rowCount }} 行 · {{ q.elapsed }}ms</span></div>
+              <div class="kv"><span class="k">拆解选表</span><span class="v"><code>{{ q.expectedTable }}</code> → 实际 <code :class="{diff:q.expectedTable!==q.resolvedTable}">{{ q.resolvedTable }}</code> <span class="muted">(id {{ q.resolvedTableId }})</span></span></div>
+              <el-table :data="q.columns" size="mini" border class="map-table">
+                <el-table-column label="拆解列名" prop="name" width="150"><template slot-scope="{row}"><code>{{ row.name }}</code></template></el-table-column>
+                <el-table-column label="角色" width="70"><template slot-scope="{row}"><el-tag size="mini" :type="row.role==='measure'?'':'info'" effect="plain">{{ row.role==='measure'?'指标':'维度' }}</el-tag></template></el-table-column>
+                <el-table-column label="过滤" prop="filter" min-width="120"><template slot-scope="{row}"><span class="small">{{ row.filter||'—' }}</span></template></el-table-column>
+                <el-table-column label="映射到" min-width="170">
+                  <template slot-scope="{row}">
+                    <span v-if="row.resolved" class="small">{{ row.resolved.name }} <span class="muted">#{{ row.resolved.id }}</span> <el-tag v-if="row.resolved.aggType" size="mini" effect="plain" type="warning" style="margin-left:2px">{{ row.resolved.aggType }}</el-tag></span>
+                    <span v-else class="unmatched"><i class="el-icon-warning"></i> 未映射</span>
+                  </template>
+                </el-table-column>
+              </el-table>
+              <el-collapse class="sql-collapse"><el-collapse-item title="生成 SQL"><pre class="sql">{{ q.sql }}</pre></el-collapse-item></el-collapse>
+            </div>
+          </div>
+        </div>
+
+        <div class="trace-block">
+          <div class="tb-h"><span class="num">④</span> 执行日志 <span class="tb-r">{{ diag.trace.execLog.filter(e=>e.status==='failed').length }} 个失败</span></div>
+          <div class="tb-body">
+            <el-timeline class="exec-tl">
+              <el-timeline-item v-for="e in diag.trace.execLog" :key="e.stepId" :type="e.status==='success'?'success':'danger'" size="normal" :timestamp="e.elapsed+'ms'" placement="top">
+                <b>{{ e.stepId }}</b> {{ e.status==='success'?'成功':'失败' }} <span v-if="e.error" class="rs-err inline">{{ e.error }}</span>
+              </el-timeline-item>
+            </el-timeline>
+          </div>
+        </div>
+
+        <div class="trace-block">
+          <div class="tb-h"><span class="num">⑤</span> 总结生成
+            <el-link type="danger" :underline="false" class="tb-link" @click="pick('SUMMARY')">判为总结错误</el-link></div>
+          <div class="tb-body">
+            <div class="kv"><span class="k">送入总结的数据</span><span class="v small">step_{{ diag.steps.length-1 }} 输出 · {{ diag.trace.summaryInputRows }} 行（截断头 {{ diag.trace.truncHead }} / 尾 {{ diag.trace.truncTail }}）</span></div>
+            <div class="kv"><span class="k">答案</span><span class="v small">{{ diag.answer }}</span></div>
+            <el-link type="primary" :underline="false" style="font-size:12px" @click="logDialog=true"><i class="el-icon-document"></i> 查看 System B 日志全文（含提示词）</el-link>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右：错误定位表单 -->
+      <div class="diag-col right">
+        <div class="col-title">错误定位 <el-tag v-if="diag.diagnosis" size="mini" type="warning" style="float:right">已定位</el-tag></div>
+        <div class="auto-hint" v-if="autoHints(diag).length">
+          <i class="el-icon-magic-stick"></i> 系统预判：
+          <el-tag v-for="h in autoHints(diag)" :key="h" size="mini" type="warning" effect="plain" style="margin-left:4px;cursor:pointer" @click="pick(h)">{{ dictName(h) }}</el-tag>
+          <div class="ah-why">{{ autoHintWhy(diag) }}</div>
+        </div>
+        <el-form label-position="top" size="small" class="diag-form">
+          <el-form-item>
+            <template slot="label">主要错误类型 <span class="req">*</span></template>
+            <el-radio-group v-model="diagForm.primary" class="vert">
+              <el-radio v-for="d in adminErrorTypes" :key="d.code" :label="d.code">
+                {{ d.name }} <span class="stage">{{ d.stage }}</span>
+              </el-radio>
+            </el-radio-group>
+            <div v-if="diagForm.primary==='METRIC_DIM'" class="sub-radio">
+              <el-radio-group v-model="diagForm.sub" size="mini">
+                <el-radio-button label="METRIC_DIM.METRIC">指标错误</el-radio-button>
+                <el-radio-button label="METRIC_DIM.DIMENSION">维度错误</el-radio-button>
+                <el-radio-button label="METRIC_DIM.BOTH">两者都有</el-radio-button>
+              </el-radio-group>
+            </div>
+          </el-form-item>
+          <el-form-item label="次要错误类型（可多选）">
+            <el-checkbox-group v-model="diagForm.secondary">
+              <el-checkbox v-for="d in adminErrorTypes" :key="d.code" :label="d.code" :disabled="d.code===diagForm.primary">{{ d.name }}</el-checkbox>
+            </el-checkbox-group>
+          </el-form-item>
+          <el-form-item label="出错步骤">
+            <el-select v-model="diagForm.errorStepId" placeholder="点击左/中栏步骤可快速选中" style="width:100%" clearable>
+              <el-option v-for="st in diag.steps" :key="st.stepId" :label="st.stepId+' · '+stepTypeZh(st.type)+' · '+st.description" :value="st.stepId"></el-option>
+            </el-select>
+          </el-form-item>
+
+          <template v-if="diagForm.primary==='TABLE_SELECT'">
+            <el-form-item label="实际选表 → 应选表">
+              <div class="pair"><el-input :value="focusStepTrace ? focusStepTrace.resolvedTable : ''" disabled size="mini"></el-input><span class="arrow">→</span>
+                <el-select v-model="diagForm.expectedTable" filterable placeholder="搜索表" size="mini" style="width:100%"><el-option v-for="t in allTables" :key="t" :label="t" :value="t"></el-option></el-select></div>
+            </el-form-item>
+          </template>
+          <template v-if="diagForm.primary==='METRIC_DIM'">
+            <el-form-item label="实际指标/维度 → 应为">
+              <div v-for="(row,i) in diagForm.entityFix" :key="i" class="pair" style="margin-bottom:4px">
+                <el-input v-model="row.actual" placeholder="实际" size="mini"></el-input><span class="arrow">→</span><el-input v-model="row.expected" placeholder="应为" size="mini"></el-input>
+                <el-button icon="el-icon-delete" size="mini" type="text" @click="diagForm.entityFix.splice(i,1)"></el-button>
+              </div>
+              <el-button size="mini" type="text" icon="el-icon-plus" @click="diagForm.entityFix.push({actual:'',expected:''})">添加一组</el-button>
+            </el-form-item>
+          </template>
+
+          <el-form-item>
+            <template slot="label">根因说明 <span class="req">*</span></template>
+            <el-input type="textarea" :rows="3" v-model="diagForm.rootCause" placeholder="例如：问题中「分压线损率」在 view_line_loss_management_view_by_voltage 表，但该表 description 未包含「分压」关键词，召回未命中，模型退而选了分区线损表。"></el-input>
+          </el-form-item>
+          <el-form-item label="修复方式">
+            <el-select v-model="diagForm.fixType" style="width:100%" placeholder="选择修复方式">
+              <el-option label="修改表描述 / 业务口径" value="TABLE_DESC"></el-option>
+              <el-option label="补充指标/维度别名或描述" value="ENTITY_ALIAS"></el-option>
+              <el-option label="修正 agg_type 聚合类型" value="AGG_TYPE"></el-option>
+              <el-option label="补充智能体知识库" value="KNOWLEDGE"></el-option>
+              <el-option label="调整召回配置 / 领域知识" value="RECALL_CONFIG"></el-option>
+              <el-option label="调整拆解提示词" value="PROMPT_DECOMPOSE"></el-option>
+              <el-option label="调整总结提示词" value="PROMPT_SUMMARY"></el-option>
+              <el-option label="计算函数缺陷" value="FUNCTION"></el-option>
+              <el-option label="底层数据问题" value="DATA"></el-option>
+              <el-option label="无需修复（用户理解偏差）" value="NONE"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="修复说明">
+            <el-input type="textarea" :rows="2" v-model="diagForm.fixDetail" placeholder="做了什么 / 计划做什么"></el-input>
+          </el-form-item>
+          <div class="fix-shortcuts" v-if="diagForm.fixType">
+            <span class="muted">快捷跳转：</span>
+            <el-link v-if="diagForm.fixType==='TABLE_DESC'" type="primary" :underline="false">字段映射管理 › 编辑表描述</el-link>
+            <el-link v-if="diagForm.fixType==='ENTITY_ALIAS'||diagForm.fixType==='AGG_TYPE'" type="primary" :underline="false">指标管理 / 维度管理</el-link>
+            <el-link v-if="diagForm.fixType==='KNOWLEDGE'" type="primary" :underline="false">智能体管理 › 知识库</el-link>
+            <el-link v-if="diagForm.fixType==='RECALL_CONFIG'" type="primary" :underline="false">召回服务配置</el-link>
+            <el-link v-if="diagForm.fixType.startsWith('PROMPT')" type="primary" :underline="false">提示词管理</el-link>
+          </div>
+          <el-form-item label="修复状态" v-if="diag.diagnosis">
+            <el-radio-group v-model="diagForm.fixStatus" size="mini">
+              <el-radio-button :label="0">待修复</el-radio-button><el-radio-button :label="1">已修复</el-radio-button><el-radio-button :label="2">已验证</el-radio-button>
+            </el-radio-group>
+          </el-form-item>
+          <el-checkbox v-model="diagForm.addToRegression">保存后加入 System B 回归测试集</el-checkbox>
+          <div class="form-actions">
+            <el-button size="small" @click="go('sessions')">返回</el-button>
+            <el-button size="small" :disabled="!diagForm.primary||!diagForm.rootCause" @click="saveDiagnosis(false)">仅保存</el-button>
+            <el-button size="small" type="primary" :disabled="!diagForm.primary||!diagForm.rootCause" @click="saveDiagnosis(true)"><i class="el-icon-magic-stick"></i> 保存并生成调优建议</el-button>
+          </div>
+          <div class="diag-history" v-if="diag.diagnosis">
+            <div class="muted">最近定位：{{ diag.diagnosis.by }} · {{ diag.diagnosis.at }}</div>
+            <div v-if="taskOfChat(diag.chatId)" class="task-link">
+              <i class="el-icon-s-promotion"></i> 调优任务 <b>{{ taskOfChat(diag.chatId).taskNo }}</b>
+              <el-tag size="mini" :type="taskStatusType(taskOfChat(diag.chatId).status)">{{ taskStatusName(taskOfChat(diag.chatId).status) }}</el-tag>
+              <el-link type="primary" :underline="false" style="font-size:12px" @click="openTask(taskOfChat(diag.chatId).id)">查看</el-link>
+            </div>
+          </div>
+        </el-form>
+      </div>
+    </div>
+
+    <!-- 弹窗：元数据 / JSON / 日志 -->
+    <el-dialog title="送入拆解模型的元数据（召回缩圈后）" :visible.sync="metaDialog" width="720px" append-to-body><pre class="json">{{ mockMeta }}</pre></el-dialog>
+    <el-dialog title="拆解 JSON 原文" :visible.sync="jsonDialog" width="720px" append-to-body><pre class="json">{{ decomposeJson }}</pre></el-dialog>
+    <el-dialog title="System B 操作日志（userlogs/1024/2026-09-29/问题17.log）" :visible.sync="logDialog" width="800px" append-to-body><pre class="json log">{{ mockLog }}</pre></el-dialog>
+  </div>
+
+
+  <!-- ===================== ⑧ 调优任务列表 ===================== -->
+  <div v-show="page==='tuning'" class="proto-page admin-page">
+    <div class="admin-side">
+      <div class="side-group">智能问数</div><div class="side-item">智能体管理</div><div class="side-item">AI日志管理</div>
+      <div class="side-item active">问答质量管理</div>
+    </div>
+    <div class="admin-main">
+      <div class="page-title">问答质量管理</div>
+      <el-tabs v-model="adminTab" @tab-click="onAdminTab">
+        <el-tab-pane label="用户反馈" name="feedback"></el-tab-pane>
+        <el-tab-pane label="问答诊断" name="sessions"></el-tab-pane>
+        <el-tab-pane label="调优任务" name="tuning"></el-tab-pane>
+        <el-tab-pane label="回归测试集" name="regression" disabled></el-tab-pane>
+        <el-tab-pane label="质量统计" name="stats"></el-tab-pane>
+        <el-tab-pane label="设置" name="settings"></el-tab-pane>
+      </el-tabs>
+      <div class="search-box">
+        <el-radio-group v-model="tq.quick" size="small">
+          <el-radio-button label="all">全部</el-radio-button>
+          <el-radio-button label="todo">待处理</el-radio-button>
+          <el-radio-button label="verifying">验证中</el-radio-button>
+          <el-radio-button label="verified">待提交</el-radio-button>
+          <el-radio-button label="pending">待审批</el-radio-button>
+          <el-radio-button label="published">已发布</el-radio-button>
+          <el-radio-button label="rolled">已回退</el-radio-button>
+        </el-radio-group>
+        <el-select v-model="fq.agent" placeholder="全部智能体" size="small" style="width:180px;margin-left:8px" clearable></el-select>
+        <el-select v-model="fq.type" placeholder="全部错误类型" size="small" style="width:150px;margin-left:8px" clearable><el-option v-for="d in adminErrorTypes" :key="d.code" :label="d.name" :value="d.code"></el-option></el-select>
+        <el-input v-model="fq.kw" placeholder="搜索任务号 / 问题 / 资产" size="small" suffix-icon="el-icon-search" style="width:240px;margin-left:8px"></el-input>
+      </div>
+      <div class="stat-strip">
+        <div class="stat"><div class="n">{{ tasks.length }}</div><div class="l">调优任务</div></div>
+        <div class="stat warn"><div class="n">{{ tasks.filter(t=>['DRAFT','VERIFIED'].includes(t.status)).length }}</div><div class="l">待处理</div></div>
+        <div class="stat"><div class="n">{{ tasks.filter(t=>t.status==='VERIFYING').length }}</div><div class="l">验证中</div></div>
+        <div class="stat ok"><div class="n">{{ tasks.filter(t=>t.status==='PUBLISHED').length }}</div><div class="l">已发布</div></div>
+        <div class="stat"><div class="n">{{ tasks.filter(t=>t.status==='ROLLED_BACK').length }}</div><div class="l">已回退</div></div>
+        <div class="stat"><div class="n">91%</div><div class="l">验证通过率</div></div>
+      </div>
+      <el-table :data="filteredTasks" border size="small" class="normal-table" @row-click="r=>openTask(r.id)" style="cursor:pointer">
+        <el-table-column label="任务号" prop="taskNo" width="130"><template slot-scope="{row}"><b>{{ row.taskNo }}</b><span v-if="row.round>1" class="muted"> · 第{{ row.round }}轮</span></template></el-table-column>
+        <el-table-column label="来源问题" prop="question" min-width="240" show-overflow-tooltip></el-table-column>
+        <el-table-column label="错误类型" width="130"><template slot-scope="{row}"><el-tag size="mini" type="warning">{{ dictName(row.errorType) }}</el-tag></template></el-table-column>
+        <el-table-column label="变更" width="200">
+          <template slot-scope="{row}"><el-tag v-for="c in row.changes.filter(c=>c.accepted)" :key="c.id" size="mini" effect="plain" style="margin:1px 3px 1px 0">{{ assetName(c.assetType) }}</el-tag></template>
+        </el-table-column>
+        <el-table-column label="验证结果" width="220">
+          <template slot-scope="{row}">
+            <span v-if="!row.verify" class="muted">—</span>
+            <template v-else-if="row.status==='VERIFYING'"><el-progress :percentage="Math.round(row.verify.done/row.verify.total*100)" :stroke-width="8" style="width:150px;display:inline-block"></el-progress> <span class="small">{{ row.verify.done }}/{{ row.verify.total }}</span></template>
+            <template v-else>
+              <el-tag size="mini" :type="row.verify.conclusion==='PASS'?'success':row.verify.conclusion==='PASS_WITH_WARN'?'warning':'danger'" effect="dark">{{ {PASS:'通过',PASS_WITH_WARN:'通过(有退化)',FAIL:'未通过'}[row.verify.conclusion] }}</el-tag>
+              <span class="small" style="margin-left:4px">原题{{ row.verify.originFixed?'✓':'✗' }} · 回归 {{ row.verify.regPass }}/{{ row.verify.regTotal }}<span v-if="row.verify.degraded" style="color:#ef4444"> · 退化{{ row.verify.degraded }}</span></span>
+            </template>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="100"><template slot-scope="{row}"><el-tag size="mini" :type="taskStatusType(row.status)">{{ taskStatusName(row.status) }}</el-tag></template></el-table-column>
+        <el-table-column label="创建人 / 时间" width="150"><template slot-scope="{row}"><div>{{ row.by }}</div><div class="muted small">{{ row.at }}</div></template></el-table-column>
+        <el-table-column label="操作" width="150" fixed="right">
+          <template slot-scope="{row}">
+            <el-link type="primary" :underline="false" @click.stop="openTask(row.id)">{{ row.status==='DRAFT'?'去执行':row.status==='VERIFIED'?'去提交':row.status==='PENDING_APPROVAL'?'查看':'详情' }}</el-link>
+            <el-link v-if="row.status==='PUBLISHED'" type="danger" :underline="false" style="margin-left:10px" @click.stop="openTask(row.id, 'rollback')">回退</el-link>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div class="pager"><el-pagination layout="total, prev, pager, next" :total="filteredTasks.length" small></el-pagination></div>
+    </div>
+  </div>
+
+  <!-- ===================== ⑨ 调优任务详情 ===================== -->
+  <div v-show="page==='tuningDetail'" class="proto-page tdetail-page" v-if="task">
+    <div class="diag-head">
+      <el-page-header @back="go('tuning')" :content="'调优任务 ' + task.taskNo"></el-page-header>
+      <div class="diag-meta">
+        <el-tag size="small" :type="taskStatusType(task.status)" effect="dark">{{ taskStatusName(task.status) }}</el-tag>
+        <span><b>来源问题</b> {{ task.question }}</span>
+        <span><b>错误类型</b> <el-tag size="mini" type="warning">{{ dictName(task.errorType) }}</el-tag></span>
+        <span><b>创建</b> {{ task.by }} · {{ task.at }}</span>
+        <span v-if="task.round>1"><b>轮次</b> 第 {{ task.round }} 轮</span>
+        <el-link type="primary" :underline="false" style="font-size:12px;margin-left:auto" @click="openDiagnosis(task.chatId)"><i class="el-icon-view"></i> 查看诊断</el-link>
+      </div>
+    </div>
+
+    <!-- 步骤条 -->
+    <div class="tsteps">
+      <el-steps :active="taskStepIndex(task.status)" finish-status="success" :process-status="task.status==='FAILED'||task.status==='ROLLED_BACK'?'error':'process'" simple>
+        <el-step title="生成建议" description="规则引擎 + 人工确认"></el-step>
+        <el-step title="应用草稿" description="拍快照 · 不影响线上"></el-step>
+        <el-step title="自动验证" :description="task.verify ? task.verify.total + ' 题' : '原题 + 同类 + 回归集'"></el-step>
+        <el-step title="查看结果" description="前后对比 · 退化检测"></el-step>
+        <el-step title="超级管理员审批" :description="task.approval ? (task.approval.result==='APPROVED'?'已通过 · '+task.approval.by : task.approval.result==='REJECTED'?'已驳回':'待审批') : '提交后通知'"></el-step>
+        <el-step :title="task.status==='ROLLED_BACK'?'已回退':'发布'" :description="task.status==='ROLLED_BACK'?'快照已恢复':'审批通过自动发布'"></el-step>
+      </el-steps>
+    </div>
+
+    <div class="tdetail-body">
+      <!-- 左：定位结论 + 影响范围 -->
+      <div class="tcol left">
+        <div class="card">
+          <div class="card-h">定位结论</div>
+          <div class="kv"><span class="k">主因</span><span class="v"><el-tag size="mini" type="warning">{{ dictName(task.errorType) }}</el-tag></span></div>
+          <div class="kv"><span class="k">出错步骤</span><span class="v">{{ task.diagnosis.errorStepId }}</span></div>
+          <div class="kv" v-if="task.diagnosis.actualTable"><span class="k">实际 → 应选表</span><span class="v small"><code class="diff">{{ task.diagnosis.actualTable }}</code><br>→ <code class="hit">{{ task.diagnosis.expectedTable }}</code></span></div>
+          <div class="kv"><span class="k">根因</span><span class="v small">{{ task.diagnosis.rootCause }}</span></div>
+        </div>
+        <div class="card">
+          <div class="card-h">影响范围 <el-tooltip content="本任务涉及的资产，近 30 天被哪些智能体 / 多少问答使用"><i class="el-icon-info muted"></i></el-tooltip></div>
+          <div class="kv"><span class="k">智能体</span><span class="v small">{{ task.impact.agents.join('、') }}</span></div>
+          <div class="kv"><span class="k">近30天相关问答</span><span class="v"><b>{{ task.impact.chats }}</b> 轮，其中 👎 {{ task.impact.negative }}</span></div>
+          <div class="kv"><span class="k">回归集命中</span><span class="v">{{ task.impact.regression }} 题</span></div>
+        </div>
+        <div class="card" v-if="task.snapshots && task.snapshots.length">
+          <div class="card-h">资产快照 <span class="sub">执行时拍摄，回退依据</span></div>
+          <div v-for="sn in task.snapshots" :key="sn.id" class="snap">
+            <div><el-tag size="mini" effect="plain">{{ assetName(sn.assetType) }}</el-tag> <span class="small">{{ sn.label }}</span></div>
+            <div class="muted small">{{ sn.field }} · {{ sn.at }}<span v-if="sn.version"> · {{ sn.version }}</span></div>
+          </div>
+        </div>
+        <div class="card audit">
+          <div class="card-h">操作记录</div>
+          <el-timeline>
+            <el-timeline-item v-for="(a,i) in task.audit" :key="i" :timestamp="a.at" size="normal" :type="a.type||''">{{ a.text }} <span class="muted">· {{ a.by }}</span></el-timeline-item>
+          </el-timeline>
+        </div>
+      </div>
+
+      <!-- 中：变更列表 -->
+      <div class="tcol mid">
+        <div class="card">
+          <div class="card-h">调优变更
+            <span class="sub">{{ task.changes.filter(c=>c.accepted).length }} / {{ task.changes.length }} 条采纳</span>
+            <el-button v-if="task.status==='DRAFT'" size="mini" style="float:right" icon="el-icon-plus" @click="addManualChange">手动追加变更</el-button>
+          </div>
+          <div v-for="c in task.changes" :key="c.id" class="change" :class="{off:!c.accepted, failed:c.applyStatus==='FAILED'}">
+            <div class="ch-h">
+              <el-checkbox v-model="c.accepted" :disabled="task.status!=='DRAFT'"></el-checkbox>
+              <el-tag size="mini" :type="c.source==='SUGGEST'?'':'info'" effect="plain">{{ c.source==='SUGGEST'?'系统建议':'手动' }}</el-tag>
+              <el-tag size="mini" effect="dark" :color="assetColor(c.assetType)" style="border:none">{{ assetName(c.assetType) }}</el-tag>
+              <span class="ch-target">{{ c.targetLabel }} <span class="muted">· {{ c.field }}</span></span>
+              <el-tag v-if="c.confidence" size="mini" :type="{高:'success',中:'warning',低:'info'}[c.confidence]" effect="plain" style="margin-left:auto">置信度 {{ c.confidence }}</el-tag>
+              <el-tag v-if="c.applyStatus" size="mini" :type="c.applyStatus==='FAILED'?'danger':c.applyStatus==='PUBLISHED'?'success':c.applyStatus==='ROLLED_BACK'?'info':''" style="margin-left:6px">{{ {PENDING:'待应用',APPLIED:'草稿中',PUBLISHED:'已发布',ROLLED_BACK:'已回退',FAILED:'失败'}[c.applyStatus] }}</el-tag>
+            </div>
+            <div class="ch-reason"><i class="el-icon-light-rain"></i> {{ c.reason }}</div>
+            <div class="ch-diff">
+              <div class="dcol before"><div class="dl">变更前</div><div class="dv">{{ c.before || '（空）' }}</div></div>
+              <div class="darrow">→</div>
+              <div class="dcol after"><div class="dl">变更后
+                <el-link v-if="task.status==='DRAFT' && c.assetType.startsWith('PROMPT')" type="primary" :underline="false" style="font-size:11px;margin-left:6px" @click="openEditor(c)"><i class="el-icon-edit-outline"></i> 打开提示词编辑器</el-link>
+                <el-link v-else-if="task.status==='DRAFT'" type="primary" :underline="false" style="font-size:11px;margin-left:6px" @click="editChange(c)">编辑</el-link>
+                <el-tag v-if="c.assetType.startsWith('PROMPT') && c.draftVersion" size="mini" type="success" effect="plain" style="margin-left:6px">草稿 {{ c.draftVersion }} · +{{ c.diffAdd }}/−{{ c.diffDel }} 行</el-tag></div>
+                <div class="dv" v-if="!c.editing" v-html="highlightDiff(c.before, c.after)"></div>
+                <el-input v-else type="textarea" :rows="3" size="mini" v-model="c.after" @blur="c.editing=false"></el-input>
+              </div>
+            </div>
+            <div v-if="c.applyError" class="rs-err" style="margin-top:6px">{{ c.applyError }}</div>
+            <div class="ch-foot muted small">{{ c.targetModule }} · 生效方式：{{ c.effect }}</div>
+          </div>
+          <div v-if="!task.changes.length" class="muted" style="padding:20px;text-align:center">暂无变更，点击「手动追加变更」</div>
+        </div>
+        <div class="card" v-if="task.status==='DRAFT'">
+          <div class="card-h">验证集配置 <span class="sub">默认来自「设置」（上限 {{ settings.maxCases }} 条）· 本任务可临时调整</span> <el-link type="primary" :underline="false" style="float:right;font-size:12px" @click="go('settings')">修改默认</el-link></div>
+          <div class="kv"><span class="k">原问题</span><span class="v">1 题（必含）</span></div>
+          <div class="kv"><span class="k">同类历史问题</span><span class="v"><el-input-number v-model="verifyCfg.similar" :min="0" :max="settings.maxCases-1" size="mini"></el-input-number> <span class="muted small">同智能体 · 同错误类型 · 涉及相同表/指标，优先 👎</span></span></div>
+          <div class="kv"><span class="k">回归测试集</span><span class="v"><el-input-number v-model="verifyCfg.regression" :min="0" :max="settings.maxCases-1" size="mini"></el-input-number> <span class="muted small">标签命中本次变更资产的回归题</span></span></div>
+          <div class="kv"><span class="k">临时追加</span><span class="v"><el-input size="mini" placeholder="输入问题后回车添加" style="width:360px" v-model="verifyCfg.manualInput" @keyup.enter.native="verifyCfg.manual.push(verifyCfg.manualInput);verifyCfg.manualInput=''"></el-input>
+            <div><el-tag v-for="(m,i) in verifyCfg.manual" :key="i" size="mini" closable @close="verifyCfg.manual.splice(i,1)" style="margin:4px 4px 0 0">{{ m }}</el-tag></div></span></div>
+          <div class="kv"><span class="k">合计</span><span class="v"><b :style="{color: verifyTotal>settings.maxCases?'#ef4444':''}">{{ verifyTotal }}</b> / {{ settings.maxCases }} 题<span v-if="verifyTotal>settings.maxCases" class="bad small"> · 超出上限，请减少或在「设置」中调高</span></span></div>
+          <div class="kv"><span class="k">判定</span><span class="v small"><el-checkbox v-model="verifyCfg.judgeTable" disabled>表</el-checkbox> <el-checkbox v-model="verifyCfg.judgeEntity" disabled>指标/维度</el-checkbox> <el-checkbox v-model="verifyCfg.judgeStatus" disabled>执行成功</el-checkbox> <el-checkbox v-model="verifyCfg.judgeAnswer">答案关键词/数值</el-checkbox> <el-checkbox v-model="verifyCfg.judgeLlm">LLM 一致性辅助判定</el-checkbox></span></div>
+          <el-alert type="info" :closable="false" show-icon style="margin-top:6px" title="验证在草稿态执行：元数据以覆盖方式传给 System B，提示词用未激活的新版本；线上问数不受影响。验证不经过召回缩圈，发布后会自动对原问题做一次线上复验。"></el-alert>
+        </div>
+      </div>
+
+      <!-- 右：结果与操作 -->
+      <div class="tcol right">
+        <div class="card" v-if="task.verify">
+          <div class="card-h">验证结果 <el-tag size="mini" :type="task.verify.conclusion==='PASS'?'success':task.verify.conclusion==='PASS_WITH_WARN'?'warning':'danger'" effect="dark" style="float:right">{{ {PASS:'通过',PASS_WITH_WARN:'通过（有退化）',FAIL:'未通过',RUNNING:'验证中'}[task.status==='VERIFYING'?'RUNNING':task.verify.conclusion] }}</el-tag></div>
+          <template v-if="task.status==='VERIFYING'">
+            <el-progress :percentage="Math.round(task.verify.done/task.verify.total*100)" :stroke-width="12"></el-progress>
+            <div class="muted small" style="margin-top:6px">{{ task.verify.done }} / {{ task.verify.total }} 题 · 并发 3 · 预计剩余 {{ Math.ceil((task.verify.total-task.verify.done)*15/3) }}s</div>
+            <el-button size="mini" style="margin-top:8px" @click="task.status='VERIFIED'">（原型）模拟完成</el-button>
+          </template>
+          <template v-else>
+            <div class="vgrid">
+              <div class="vcell" :class="task.verify.originFixed?'ok':'bad'"><div class="n">{{ task.verify.originFixed?'已修复':'未修复' }}</div><div class="l">原问题</div></div>
+              <div class="vcell"><div class="n">{{ task.verify.regPass }}/{{ task.verify.regTotal }}</div><div class="l">回归通过</div></div>
+              <div class="vcell" :class="task.verify.degraded?'bad':''"><div class="n">{{ task.verify.degraded }}</div><div class="l">退化</div></div>
+              <div class="vcell ok"><div class="n">{{ task.verify.improved }}</div><div class="l">顺带修复</div></div>
+            </div>
+            <div class="kv small" style="margin-top:8px"><span class="k">耗时</span><span class="v">均 {{ task.verify.elapsedBefore }}s → {{ task.verify.elapsedAfter }}s</span></div>
+            <div class="kv small"><span class="k">Token</span><span class="v">约 {{ task.verify.tokens }} k</span></div>
+            <el-button size="small" type="primary" plain style="width:100%;margin-top:8px" @click="openVerify(task.id)"><i class="el-icon-data-analysis"></i> 查看逐题报告</el-button>
+            <div v-if="task.verify.degraded" class="degrade-warn"><i class="el-icon-warning"></i> 有 {{ task.verify.degraded }} 题由对变错，发布前请逐题确认</div>
+          </template>
+        </div>
+        <div class="card" v-else>
+          <div class="card-h">验证结果</div>
+          <div class="muted">执行后自动开始验证</div>
+        </div>
+
+        <div class="card actions">
+          <div class="card-h">操作</div>
+          <template v-if="task.status==='DRAFT'">
+            <el-button type="primary" style="width:100%" :disabled="!task.changes.some(c=>c.accepted)" @click="executeTask"><i class="el-icon-video-play"></i> 执行并验证</el-button>
+            <div class="muted small" style="margin:6px 0 10px">将拍摄资产快照 → 应用到草稿态 → 自动跑 {{ 1+verifyCfg.similar+verifyCfg.regression+verifyCfg.manual.length }} 题验证集</div>
+            <el-button style="width:100%" @click="task.status='CANCELLED';go('tuning')">取消任务</el-button>
+          </template>
+          <template v-else-if="task.status==='VERIFYING'">
+            <el-button style="width:100%" @click="task.status='VERIFIED'">中止验证</el-button>
+          </template>
+          <template v-else-if="task.status==='VERIFIED'">
+            <el-alert v-if="task.approval && task.approval.result==='REJECTED'" type="error" :closable="false" show-icon title="审批已驳回" :description="task.approval.comment" style="margin-bottom:8px"></el-alert>
+            <el-button type="success" style="width:100%" :disabled="task.verify.conclusion==='FAIL'" @click="publishDialog=true"><i class="el-icon-s-check"></i> 提交超级管理员审批</el-button>
+            <div class="muted small" style="margin:6px 0 10px" v-if="task.verify.conclusion==='FAIL'">原问题未修复，不允许提交；请回退或修改建议后重跑</div>
+            <div class="muted small" style="margin:6px 0 10px" v-else-if="task.verify.conclusion==='PASS_WITH_WARN'">存在退化，提交需填写确认说明</div>
+            <div class="muted small" style="margin:6px 0 10px" v-else>审批通过后系统自动发布到线上</div>
+            <el-button style="width:100%;margin-bottom:8px" @click="task.status='DRAFT';task.round++;task.verify=null;task.audit.push({at:now(),by:'王管理员',text:'修改建议，进入第'+task.round+'轮'})"><i class="el-icon-edit"></i> 修改建议重新验证</el-button>
+            <el-button type="danger" plain style="width:100%" @click="rollbackDialog=true"><i class="el-icon-refresh-left"></i> 回退（恢复快照）</el-button>
+          </template>
+          <template v-else-if="task.status==='PENDING_APPROVAL'">
+            <el-alert type="warning" :closable="false" show-icon :title="'已于 ' + task.approval.submittedAt + ' 提交审批'" description="等待超级管理员审批，审批通过后自动发布。审批期间验证报告只读。" style="margin-bottom:8px"></el-alert>
+            <div class="kv small"><span class="k">审批人</span><span class="v">超级管理员组（{{ settings.approvers.join('、') }}）</span></div>
+            <div class="kv small" v-if="task.approval.confirmNote"><span class="k">确认说明</span><span class="v">{{ task.approval.confirmNote }}</span></div>
+            <el-button style="width:100%;margin-top:8px" @click="withdrawTask"><i class="el-icon-back"></i> 撤回申请</el-button>
+            <el-button type="danger" plain style="width:100%;margin-top:8px" @click="rollbackDialog=true"><i class="el-icon-refresh-left"></i> 回退（恢复快照）</el-button>
+            <div class="muted small" style="margin-top:8px">（原型）<el-link type="primary" :underline="false" style="font-size:12px" @click="go('approval')">切换到超级管理员视角审批 →</el-link></div>
+          </template>
+          <template v-else-if="task.status==='PUBLISHED'">
+            <el-alert type="success" :closable="false" show-icon :title="'已于 ' + task.publishedAt + ' 发布'" :description="task.approval ? '审批人 ' + task.approval.by + ' · ' + task.approval.at + (task.approval.comment ? ' · ' + task.approval.comment : '') : ''" style="margin-bottom:8px"></el-alert>
+            <div class="kv small"><span class="k">线上复验</span><span class="v"><el-tag size="mini" type="success">原问题 ✓ 通过</el-tag> <span class="muted">发布后 32s</span></span></div>
+            <div class="kv small"><span class="k">观察期</span><span class="v">第 {{ task.observe.days }} / {{ settings.observeDays }} 天 · 24h 内同类 👎 <b :style="{color:task.observe.negative>=settings.alertThreshold?'#ef4444':'#16a34a'}">{{ task.observe.negative }}</b> 条（阈值 {{ settings.alertThreshold }}）</span></div>
+            <el-alert v-if="task.observe.negative>=settings.alertThreshold" type="error" :closable="false" show-icon title="观察期告警" :description="'24h 内出现 ' + task.observe.negative + ' 条同类负反馈（≥ ' + settings.alertThreshold + '），建议回退或新建调优任务'" style="margin-top:8px"></el-alert>
+            <el-button type="danger" plain style="width:100%;margin-top:8px" @click="rollbackDialog=true"><i class="el-icon-refresh-left"></i> 回退已发布</el-button>
+          </template>
+          <template v-else-if="task.status==='ROLLED_BACK'">
+            <el-alert type="info" :closable="false" show-icon :title="'已于 ' + task.rolledBackAt + ' 回退'" :description="task.rollbackReason" style="margin-bottom:8px"></el-alert>
+            <el-button style="width:100%" @click="cloneTask"><i class="el-icon-document-copy"></i> 复制为新任务</el-button>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- 发布确认 -->
+    <el-dialog title="提交超级管理员审批" :visible.sync="publishDialog" width="560px" append-to-body>
+      <div class="pub-list">
+        <div class="muted small" style="margin-bottom:6px">审批通过后，系统将按顺序写入以下变更并触发下游同步：</div>
+        <div v-for="c in task.changes.filter(c=>c.accepted)" :key="c.id" class="pub-item"><el-tag size="mini" effect="plain">{{ assetName(c.assetType) }}</el-tag> {{ c.targetLabel }} <span class="muted">· {{ c.effect }}</span></div>
+        <div class="pub-item muted small" style="margin-top:6px"><i class="el-icon-connection"></i> recall 元数据同步 · System B 提示词切换（如有）· 发布后自动线上复验原问题</div>
+      </div>
+      <el-alert v-if="task.verify && task.verify.conclusion==='PASS_WITH_WARN'" type="warning" show-icon :closable="false" title="验证存在退化" description="有回归题由对变错。请确认已逐题核对，并填写说明（审批人可见）。" style="margin:10px 0"></el-alert>
+      <el-input v-if="task.verify && task.verify.conclusion==='PASS_WITH_WARN'" type="textarea" :rows="2" v-model="publishNote" placeholder="确认说明（必填）：例如 退化的 2 题为历史期望值本身有误，已更新回归集"></el-input>
+      <el-checkbox v-model="publishAddRegression" style="margin-top:10px">将原问题及验证通过的同类问题沉淀到回归测试集</el-checkbox>
+      <div class="kv small" style="margin-top:10px"><span class="k">审批人</span><span class="v">超级管理员组：{{ settings.approvers.join('、') }}</span></div>
+      <span slot="footer"><el-button size="small" @click="publishDialog=false">取消</el-button><el-button size="small" type="success" :disabled="task.verify && task.verify.conclusion==='PASS_WITH_WARN' && !publishNote" @click="submitApproval">提交审批</el-button></span>
+    </el-dialog>
+
+    <!-- 回退确认 -->
+    <el-dialog title="回退（恢复快照）" :visible.sync="rollbackDialog" width="560px" append-to-body>
+      <div class="muted small" style="margin-bottom:6px">将恢复以下资产至执行前快照：</div>
+      <div v-for="sn in task.snapshots" :key="sn.id" class="pub-item"><el-tag size="mini" effect="plain">{{ assetName(sn.assetType) }}</el-tag> {{ sn.label }} <span class="muted">· {{ sn.field }}<span v-if="sn.version"> → {{ sn.version }}</span></span></div>
+      <el-alert v-if="task.conflict" type="warning" show-icon :closable="false" title="检测到冲突" :description="task.conflict" style="margin:10px 0"></el-alert>
+      <el-radio-group v-if="task.conflict" v-model="rollbackMode" size="mini" style="margin-bottom:10px"><el-radio label="PARTIAL">仅回退未被后续任务覆盖的字段</el-radio><el-radio label="FORCE">强制全部回退</el-radio></el-radio-group>
+      <el-input type="textarea" :rows="2" v-model="rollbackReason" placeholder="回退原因（必填）"></el-input>
+      <span slot="footer"><el-button size="small" @click="rollbackDialog=false">取消</el-button><el-button size="small" type="danger" :disabled="!rollbackReason" @click="rollbackTask">确认回退</el-button></span>
+    </el-dialog>
+
+    <!-- 手动追加变更 -->
+    <el-dialog title="手动追加变更" :visible.sync="manualDialog" width="560px" append-to-body>
+      <el-form label-position="top" size="small">
+        <el-form-item label="资产类型"><el-select v-model="manualForm.assetType" style="width:100%"><el-option v-for="(v,k) in assetMeta" :key="k" :label="v.name" :value="k"></el-option></el-select></el-form-item>
+        <el-form-item label="目标对象"><el-input v-model="manualForm.target" placeholder="搜索表 / 指标 / 维度 / 智能体…"></el-input></el-form-item>
+        <el-form-item label="变更后的值"><el-input type="textarea" :rows="3" v-model="manualForm.after"></el-input></el-form-item>
+        <el-form-item label="理由"><el-input v-model="manualForm.reason"></el-input></el-form-item>
+      </el-form>
+      <span slot="footer"><el-button size="small" @click="manualDialog=false">取消</el-button><el-button size="small" type="primary" @click="confirmManual">添加</el-button></span>
+    </el-dialog>
+  </div>
+
+  <!-- ===================== ⑩ 验证报告 ===================== -->
+  <div v-show="page==='verify'" class="proto-page verify-page" v-if="task && task.verify">
+    <div class="diag-head">
+      <el-page-header @back="openTask(task.id)" :content="'验证报告 · ' + task.taskNo + (task.round>1?' · 第'+task.round+'轮':'')"></el-page-header>
+      <div class="diag-meta">
+        <el-tag size="small" :type="task.verify.conclusion==='PASS'?'success':task.verify.conclusion==='PASS_WITH_WARN'?'warning':'danger'" effect="dark">{{ {PASS:'通过',PASS_WITH_WARN:'通过（有退化）',FAIL:'未通过'}[task.verify.conclusion] }}</el-tag>
+        <span><b>验证集</b> {{ task.verify.total }} 题</span>
+        <span><b>原问题</b> {{ task.verify.originFixed?'已修复':'未修复' }}</span>
+        <span><b>回归</b> {{ task.verify.regPass }}/{{ task.verify.regTotal }}</span>
+        <span><b>退化</b> <span :style="{color:task.verify.degraded?'#ef4444':''}">{{ task.verify.degraded }}</span></span>
+        <span><b>顺带修复</b> {{ task.verify.improved }}</span>
+        <span><b>耗时</b> {{ task.verify.startedAt }} ~ {{ task.verify.finishedAt }}</span>
+        <el-button size="mini" style="margin-left:auto">导出 Excel</el-button>
+      </div>
+    </div>
+    <div class="verify-body">
+      <div class="vlist">
+        <div class="search-box" style="margin:0 0 8px">
+          <el-radio-group v-model="vq.type" size="mini">
+            <el-radio-button label="all">全部 {{ task.verify.cases.length }}</el-radio-button>
+            <el-radio-button label="DEGRADED">退化 {{ task.verify.cases.filter(c=>c.verdict==='DEGRADED').length }}</el-radio-button>
+            <el-radio-button label="FIXED">修复 {{ task.verify.cases.filter(c=>['FIXED','IMPROVED'].includes(c.verdict)).length }}</el-radio-button>
+            <el-radio-button label="STILL_FAIL">仍失败 {{ task.verify.cases.filter(c=>c.verdict==='STILL_FAIL').length }}</el-radio-button>
+            <el-radio-button label="PASS">通过 {{ task.verify.cases.filter(c=>c.verdict==='PASS').length }}</el-radio-button>
+          </el-radio-group>
+        </div>
+        <el-table :data="filteredCases" border size="mini" highlight-current-row @current-change="r=>vcase=r" style="cursor:pointer">
+          <el-table-column label="#" type="index" width="40"></el-table-column>
+          <el-table-column label="类型" width="80"><template slot-scope="{row}"><el-tag size="mini" :type="{ORIGIN:'danger',SIMILAR:'warning',REGRESSION:'',MANUAL:'info'}[row.caseType]" effect="plain">{{ {ORIGIN:'原题',SIMILAR:'同类',REGRESSION:'回归',MANUAL:'追加'}[row.caseType] }}</el-tag></template></el-table-column>
+          <el-table-column label="问题" prop="question" min-width="220" show-overflow-tooltip></el-table-column>
+          <el-table-column label="调优前" width="70" align="center"><template slot-scope="{row}"><i :class="row.beforePass?'el-icon-check ok':'el-icon-close bad'"></i></template></el-table-column>
+          <el-table-column label="调优后" width="70" align="center"><template slot-scope="{row}"><i :class="row.afterPass?'el-icon-check ok':'el-icon-close bad'"></i></template></el-table-column>
+          <el-table-column label="判定" width="90"><template slot-scope="{row}"><el-tag size="mini" :type="{FIXED:'success',IMPROVED:'success',PASS:'success',DEGRADED:'danger',STILL_FAIL:'danger',ERROR:'info',UNCHANGED:'info'}[row.verdict]" effect="dark">{{ {FIXED:'修复',IMPROVED:'顺带修复',PASS:'通过',DEGRADED:'退化',STILL_FAIL:'仍失败',ERROR:'出错',UNCHANGED:'无变化'}[row.verdict] }}</el-tag></template></el-table-column>
+          <el-table-column label="失败维度" min-width="140"><template slot-scope="{row}"><span class="small" :class="{bad:!row.afterPass}">{{ Object.entries(row.judge).filter(([k,v])=>!v.ok).map(([k,v])=>({table:'表',metrics:'指标',dims:'维度',status:'执行',answer:'答案'})[k]+'：'+v.msg).join('；') || '—' }}</span></template></el-table-column>
+          <el-table-column label="耗时" width="90"><template slot-scope="{row}"><span class="small">{{ row.elapsedBefore }}→{{ row.elapsedAfter }}s</span></template></el-table-column>
+        </el-table>
+      </div>
+      <div class="vdetail" v-if="vcase">
+        <div class="col-title">逐题对比 <el-tag size="mini" effect="plain" style="margin-left:6px">{{ {ORIGIN:'原题',SIMILAR:'同类',REGRESSION:'回归',MANUAL:'追加'}[vcase.caseType] }}</el-tag>
+          <el-link v-if="vcase.sourceChatId" type="primary" :underline="false" style="float:right;font-size:12px" @click="openDiagnosis(vcase.sourceChatId)">查看来源会话</el-link></div>
+        <div class="q-text" style="margin-bottom:10px">{{ vcase.question }}</div>
+        <div class="kv" v-if="vcase.expected"><span class="k">期望</span><span class="v small">表 <code>{{ vcase.expected.table }}</code> · 指标 {{ vcase.expected.metrics.join(', ') }}<span v-if="vcase.expected.dims"> · 维度 {{ vcase.expected.dims.join(', ') }}</span><span v-if="vcase.expected.answerKeywords"> · 答案含「{{ vcase.expected.answerKeywords.join('」「') }}」</span></span></div>
+        <table class="cmp-tbl">
+          <tr><th style="width:80px"></th><th>调优前 <span class="muted small">{{ vcase.beforeFrom }}</span></th><th>调优后 <span class="muted small">draft · {{ vcase.afterRequestId }}</span></th></tr>
+          <tr><td>选表</td><td><code :class="{diff: vcase.judge.table && !vcase.judge.table.okBefore}">{{ vcase.before.table }}</code></td><td><code :class="{hit: vcase.judge.table.ok, diff: !vcase.judge.table.ok}">{{ vcase.after.table }}</code></td></tr>
+          <tr><td>指标</td><td class="small">{{ vcase.before.metrics.join(', ') }}</td><td class="small" :class="{bad:!vcase.judge.metrics.ok}">{{ vcase.after.metrics.join(', ') }}</td></tr>
+          <tr><td>维度</td><td class="small">{{ vcase.before.dims.join(', ') }}</td><td class="small" :class="{bad:!vcase.judge.dims.ok}">{{ vcase.after.dims.join(', ') }}</td></tr>
+          <tr><td>步骤</td><td class="small">{{ vcase.before.steps }}</td><td class="small">{{ vcase.after.steps }}</td></tr>
+          <tr><td>执行</td><td><el-tag size="mini" :type="vcase.before.status==='success'?'success':'danger'" effect="plain">{{ vcase.before.status }}</el-tag></td><td><el-tag size="mini" :type="vcase.after.status==='success'?'success':'danger'" effect="plain">{{ vcase.after.status }}</el-tag></td></tr>
+          <tr><td>答案</td><td class="small ans">{{ vcase.before.answer }}</td><td class="small ans" :class="{bad:!vcase.judge.answer.ok}">{{ vcase.after.answer }}</td></tr>
+        </table>
+        <div class="judge-box">
+          <div class="card-h">判定明细</div>
+          <div v-for="(v,k) in vcase.judge" :key="k" class="jrow"><i :class="v.ok?'el-icon-success ok':'el-icon-error bad'"></i> <b>{{ ({table:'表',metrics:'指标',dims:'维度',status:'执行状态',answer:'答案'})[k] }}</b> <span class="small">{{ v.msg }}</span></div>
+          <div v-if="vcase.llmJudge" class="jrow"><i class="el-icon-cpu"></i> <b>LLM 一致性</b> <span class="small">{{ vcase.llmJudge }}</span></div>
+        </div>
+        <div v-if="vcase.verdict==='DEGRADED'" class="degrade-act">
+          <el-radio-group v-model="vcase.degradeDecision" size="mini">
+            <el-radio label="REAL">确认为真实退化</el-radio>
+            <el-radio label="EXPECTED_WRONG">历史期望值有误，更新回归集</el-radio>
+          </el-radio-group>
+        </div>
+        <div style="margin-top:10px"><el-link type="primary" :underline="false" style="font-size:12px" @click="$message.info('（原型）打开调优后请求的完整 Trace')"><i class="el-icon-share"></i> 查看调优后完整链路追踪</el-link></div>
+      </div>
+      <div class="vdetail muted" v-else style="display:flex;align-items:center;justify-content:center">← 点击左侧任一题查看前后对比</div>
+    </div>
+  </div>
+
+
+  <!-- ===================== ⑪ 审批中心（超级管理员视角） ===================== -->
+  <div v-show="page==='approval'" class="proto-page admin-page">
+    <div class="admin-side">
+      <div class="side-group">系统管理</div><div class="side-item">用户管理</div><div class="side-item">角色管理</div>
+      <div class="side-item active">审批中心 <el-badge :value="pendingApprovals.length" class="side-badge" :hidden="!pendingApprovals.length"></el-badge></div>
+      <div class="side-group">智能问数</div><div class="side-item">问答质量管理</div>
+    </div>
+    <div class="admin-main">
+      <div class="page-title">审批中心 <el-tag size="mini" type="danger" effect="dark" style="margin-left:6px">超级管理员</el-tag> <span class="sub">当前登录：赵超管</span></div>
+      <el-tabs v-model="apTab">
+        <el-tab-pane label="待我审批" name="pending"></el-tab-pane>
+        <el-tab-pane label="已处理" name="done"></el-tab-pane>
+      </el-tabs>
+      <div class="search-box">
+        <el-select size="small" placeholder="全部类型" style="width:160px" v-model="apType"><el-option label="调优发布 TUNING_PUBLISH" value="TUNING_PUBLISH"></el-option><el-option label="数据权限申请" value="DATA_ROLE" disabled></el-option></el-select>
+        <el-input size="small" placeholder="搜索任务号 / 问题" style="width:240px;margin-left:8px"></el-input>
+      </div>
+      <div class="approval-body">
+        <div class="ap-list">
+          <el-table :data="apTab==='pending'?pendingApprovals:doneApprovals" border size="small" highlight-current-row @current-change="r=>apSel=r" style="cursor:pointer">
+            <el-table-column label="类型" width="100"><template><el-tag size="mini" effect="plain">调优发布</el-tag></template></el-table-column>
+            <el-table-column label="任务号" prop="taskNo" width="140"></el-table-column>
+            <el-table-column label="来源问题" prop="question" min-width="220" show-overflow-tooltip></el-table-column>
+            <el-table-column label="错误类型" width="120"><template slot-scope="{row}"><el-tag size="mini" type="warning">{{ dictName(row.errorType) }}</el-tag></template></el-table-column>
+            <el-table-column label="验证" width="130"><template slot-scope="{row}"><el-tag size="mini" :type="row.verify.conclusion==='PASS'?'success':'warning'" effect="dark">{{ {PASS:'通过',PASS_WITH_WARN:'通过(有退化)'}[row.verify.conclusion] }}</el-tag></template></el-table-column>
+            <el-table-column label="提交人 / 时间" width="150"><template slot-scope="{row}"><div>{{ row.by }}</div><div class="muted small">{{ row.approval.submittedAt }}</div></template></el-table-column>
+            <el-table-column v-if="apTab==='done'" label="结果" width="100"><template slot-scope="{row}"><el-tag size="mini" :type="row.approval.result==='APPROVED'?'success':'danger'">{{ row.approval.result==='APPROVED'?'已通过':'已驳回' }}</el-tag></template></el-table-column>
+          </el-table>
+          <div v-if="apTab==='pending' && !pendingApprovals.length" class="muted" style="padding:30px;text-align:center">暂无待审批任务</div>
+        </div>
+        <div class="ap-detail" v-if="apSel">
+          <div class="col-title">审批单 · {{ apSel.taskNo }} <el-link type="primary" :underline="false" style="float:right;font-size:12px" @click="openTask(apSel.id)">查看任务详情</el-link></div>
+          <div class="card">
+            <div class="card-h">任务摘要</div>
+            <div class="kv"><span class="k">来源问题</span><span class="v">{{ apSel.question }}</span></div>
+            <div class="kv"><span class="k">错误类型</span><span class="v"><el-tag size="mini" type="warning">{{ dictName(apSel.errorType) }}</el-tag></span></div>
+            <div class="kv"><span class="k">根因</span><span class="v small">{{ apSel.diagnosis.rootCause }}</span></div>
+            <div class="kv"><span class="k">提交人</span><span class="v">{{ apSel.by }} · {{ apSel.approval.submittedAt }}<span v-if="apSel.round>1"> · 第 {{ apSel.round }} 轮</span></span></div>
+          </div>
+          <div class="card">
+            <div class="card-h">变更内容（{{ apSel.changes.filter(c=>c.accepted).length }} 条）</div>
+            <div v-for="c in apSel.changes.filter(c=>c.accepted)" :key="c.id" class="ap-change">
+              <el-tag size="mini" effect="dark" :color="assetColor(c.assetType)" style="border:none">{{ assetName(c.assetType) }}</el-tag> <b>{{ c.targetLabel }}</b> <span class="muted small">· {{ c.field }}</span>
+              <div class="ap-diff"><span class="muted">{{ c.before || '（空）' }}</span> → <span class="ins">{{ c.after }}</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-h">验证结论 <el-link type="primary" :underline="false" style="float:right;font-size:12px" @click="openVerify(apSel.id)">查看逐题报告</el-link></div>
+            <div class="vgrid">
+              <div class="vcell" :class="apSel.verify.originFixed?'ok':'bad'"><div class="n">{{ apSel.verify.originFixed?'已修复':'未修复' }}</div><div class="l">原问题</div></div>
+              <div class="vcell"><div class="n">{{ apSel.verify.regPass }}/{{ apSel.verify.regTotal }}</div><div class="l">回归通过</div></div>
+              <div class="vcell" :class="apSel.verify.degraded?'bad':''"><div class="n">{{ apSel.verify.degraded }}</div><div class="l">退化</div></div>
+              <div class="vcell ok"><div class="n">{{ apSel.verify.improved }}</div><div class="l">顺带修复</div></div>
+            </div>
+            <el-alert v-if="apSel.approval.confirmNote" type="warning" :closable="false" show-icon title="提交人确认说明" :description="apSel.approval.confirmNote" style="margin-top:8px"></el-alert>
+          </div>
+          <div class="card">
+            <div class="card-h">影响范围</div>
+            <div class="kv"><span class="k">智能体</span><span class="v small">{{ apSel.impact.agents.join('、') }}</span></div>
+            <div class="kv"><span class="k">近30天相关问答</span><span class="v"><b>{{ apSel.impact.chats }}</b> 轮</span></div>
+            <div class="kv"><span class="k">资产快照</span><span class="v">{{ apSel.snapshots.length }} 个（可回退）</span></div>
+          </div>
+          <div class="card" v-if="apSel.status==='PENDING_APPROVAL'">
+            <div class="card-h">审批意见</div>
+            <el-input type="textarea" :rows="2" v-model="apComment" placeholder="通过可不填；驳回必填"></el-input>
+            <div class="form-actions">
+              <el-button size="small" type="danger" plain :disabled="!apComment" @click="approve(false)">驳回</el-button>
+              <el-button size="small" type="success" @click="approve(true)"><i class="el-icon-check"></i> 通过并发布</el-button>
+            </div>
+          </div>
+          <div class="card" v-else>
+            <div class="card-h">审批结果</div>
+            <el-tag :type="apSel.approval.result==='APPROVED'?'success':'danger'">{{ apSel.approval.result==='APPROVED'?'已通过':'已驳回' }}</el-tag> <span class="small">{{ apSel.approval.by }} · {{ apSel.approval.at }}</span>
+            <div class="small" style="margin-top:6px" v-if="apSel.approval.comment">{{ apSel.approval.comment }}</div>
+          </div>
+        </div>
+        <div class="ap-detail muted" v-else style="display:flex;align-items:center;justify-content:center">← 选择一条审批单</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== ⑫ 设置 ===================== -->
+  <div v-show="page==='settings'" class="proto-page admin-page">
+    <div class="admin-side">
+      <div class="side-group">智能问数</div><div class="side-item">智能体管理</div><div class="side-item">AI日志管理</div>
+      <div class="side-item active">问答质量管理</div>
+    </div>
+    <div class="admin-main">
+      <div class="page-title">问答质量管理</div>
+      <el-tabs v-model="adminTab" @tab-click="onAdminTab">
+        <el-tab-pane label="用户反馈" name="feedback"></el-tab-pane>
+        <el-tab-pane label="问答诊断" name="sessions"></el-tab-pane>
+        <el-tab-pane label="调优任务" name="tuning"></el-tab-pane>
+        <el-tab-pane label="回归测试集" name="regression" disabled></el-tab-pane>
+        <el-tab-pane label="质量统计" name="stats"></el-tab-pane>
+        <el-tab-pane label="设置" name="settings"></el-tab-pane>
+      </el-tabs>
+      <el-alert type="info" :closable="false" show-icon title="以下配置仅超级管理员可修改；调优任务页可在本任务内临时调整验证集，不影响默认值。" style="margin-bottom:12px"></el-alert>
+      <div class="settings-grid">
+        <div class="card">
+          <div class="card-h">验证集配置 <el-radio-group v-model="settingsScope" size="mini" style="float:right"><el-radio-button label="GLOBAL">全局默认</el-radio-button><el-radio-button label="a1">深圳供电局运营分析智能体</el-radio-button><el-radio-button label="a2">线损管理智能体</el-radio-button></el-radio-group></div>
+          <el-alert v-if="settingsScope!=='GLOBAL'" type="warning" :closable="false" title="智能体级配置将覆盖全局默认；未设置的项沿用全局" style="margin-bottom:10px" show-icon></el-alert>
+          <el-form label-width="160px" size="small">
+            <el-form-item label="验证集总上限"><el-input-number v-model="settings.maxCases" :min="5" :max="200"></el-input-number> <span class="muted small">条 · 原问题 1 + 同类 + 回归 + 手动追加</span></el-form-item>
+            <el-form-item label="同类历史问题上限"><el-input-number v-model="settings.similarLimit" :min="0" :max="settings.maxCases-1"></el-input-number> <span class="muted small">同智能体 · 同错误类型 · 相同表/指标，优先 👎</span></el-form-item>
+            <el-form-item label="回归测试集上限"><el-input-number v-model="settings.regressionLimit" :min="0" :max="settings.maxCases-1"></el-input-number> <span class="muted small">标签命中本次变更资产</span></el-form-item>
+            <el-form-item label="并发度"><el-input-number v-model="settings.concurrency" :min="1" :max="10"></el-input-number> <span class="muted small">同时执行的验证题数，受 LLM 配额限制</span></el-form-item>
+            <el-form-item label="单题超时 / 整体超时"><el-input-number v-model="settings.caseTimeout" :min="30" :max="600" size="small" style="width:120px"></el-input-number> s　<el-input-number v-model="settings.totalTimeout" :min="5" :max="120" size="small" style="width:120px"></el-input-number> min</el-form-item>
+            <el-form-item label="判定维度"><el-checkbox checked disabled>表</el-checkbox> <el-checkbox checked disabled>指标/维度</el-checkbox> <el-checkbox checked disabled>执行成功</el-checkbox> <el-checkbox v-model="settings.judgeAnswer">答案关键词/数值</el-checkbox> <el-checkbox v-model="settings.judgeLlm">LLM 一致性辅助判定</el-checkbox></el-form-item>
+            <el-form-item label="验证 temperature"><el-input-number v-model="settings.temperature" :min="0" :max="1" :step="0.1" disabled></el-input-number> <span class="muted small">固定 0，保证可复现</span></el-form-item>
+            <el-form-item label="before 结果来源"><el-radio-group v-model="settings.beforeSource" size="mini"><el-radio-button label="TRACE">优先复用历史 trace</el-radio-button><el-radio-button label="RERUN">全部重跑</el-radio-button></el-radio-group> <span class="muted small">复用可省约一半 LLM 成本</span></el-form-item>
+          </el-form>
+        </div>
+        <div class="card">
+          <div class="card-h">发布与审批</div>
+          <el-form label-width="160px" size="small">
+            <el-form-item label="发布审批"><el-switch v-model="settings.approvalRequired" disabled active-text="必须经超级管理员审批"></el-switch> <span class="muted small">不可关闭</span></el-form-item>
+            <el-form-item label="审批人（超级管理员组）"><el-tag v-for="a in settings.approvers" :key="a" size="small" closable style="margin-right:6px" @close="settings.approvers.splice(settings.approvers.indexOf(a),1)">{{ a }}</el-tag><el-button size="mini" icon="el-icon-plus" @click="settings.approvers.push('新成员')">添加</el-button></el-form-item>
+            <el-form-item label="审批通知"><el-checkbox v-model="settings.notifySite">站内消息</el-checkbox> <el-checkbox v-model="settings.notifyEmail">邮件</el-checkbox></el-form-item>
+            <el-form-item label="回退是否需审批"><el-switch v-model="settings.rollbackApproval" disabled inactive-text="不需要（止损优先）"></el-switch> <span class="muted small">已发布回退后自动通知超级管理员</span></el-form-item>
+            <el-form-item label="发布后线上复验"><el-switch v-model="settings.postVerify" active-text="自动对原问题复验"></el-switch></el-form-item>
+          </el-form>
+        </div>
+        <div class="card">
+          <div class="card-h">观察期告警</div>
+          <el-form label-width="160px" size="small">
+            <el-form-item label="观察期时长"><el-input-number v-model="settings.observeDays" :min="1" :max="30"></el-input-number> 天</el-form-item>
+            <el-form-item label="告警阈值"><span class="small">滚动</span> <el-input-number v-model="settings.alertWindow" :min="1" :max="168" size="small" style="width:110px"></el-input-number> <span class="small">小时内，同智能体 · 同主错误类型 新增 👎 ≥</span> <el-input-number v-model="settings.alertThreshold" :min="1" :max="50" size="small" style="width:110px"></el-input-number> <span class="small">条</span></el-form-item>
+            <el-form-item label="告警动作"><el-checkbox v-model="settings.alertSite">任务页红色提示 + 站内消息</el-checkbox> <el-checkbox v-model="settings.alertEmail">邮件</el-checkbox> <el-checkbox v-model="settings.alertAutoRollback" disabled>自动回退（不开放）</el-checkbox></el-form-item>
+          </el-form>
+        </div>
+        <div class="card">
+          <div class="card-h">数据保留</div>
+          <el-form label-width="160px" size="small">
+            <el-form-item label="Trace 关键字段"><span class="small">永久</span></el-form-item>
+            <el-form-item label="MinIO 完整响应"><el-input-number v-model="settings.minioRetain" :min="7" :max="365"></el-input-number> 天</el-form-item>
+            <el-form-item label="验证报告逐题结果"><el-input-number v-model="settings.caseRetain" :min="30" :max="730"></el-input-number> 天</el-form-item>
+            <el-form-item label="资产快照"><span class="small">随任务永久保留</span></el-form-item>
+          </el-form>
+        </div>
+      </div>
+      <div style="text-align:right;margin-top:8px"><el-button size="small">恢复默认</el-button><el-button size="small" type="primary" @click="$message.success('配置已保存')">保存</el-button></div>
+    </div>
+  </div>
+
+  <!-- ===================== 提示词编辑器（全屏弹窗） ===================== -->
+  <el-dialog :visible.sync="editorOpen" fullscreen :show-close="false" custom-class="editor-dialog" append-to-body>
+    <div slot="title" class="editor-title">
+      <span><i class="el-icon-edit-outline"></i> 提示词编辑器 · <b>{{ editor.groupName }}</b> <span class="muted small">基线 {{ editor.baseVersion }}</span></span>
+      <span class="editor-title-r">
+        <el-tag size="mini" :type="editorLint.length?'danger':'success'" effect="plain">{{ editorLint.length ? 'lint ' + editorLint.length + ' 项' : 'lint 通过' }}</el-tag>
+        <el-tag size="mini" effect="plain" style="margin-left:6px">+{{ editorDiff.add }} / −{{ editorDiff.del }} 行</el-tag>
+        <el-button size="mini" style="margin-left:12px" @click="quickVerify" :loading="editor.verifying"><i class="el-icon-video-play"></i> 快速验证（仅原问题）</el-button>
+        <el-button size="mini" @click="editorOpen=false">取消</el-button>
+        <el-button size="mini" type="primary" :disabled="!editor.description || !editorDiff.add && !editorDiff.del || editorLint.length>0" @click="saveEditor">保存为 {{ editor.version }}</el-button>
+      </span>
+    </div>
+    <div class="editor-body" v-if="editor.change">
+      <div class="ed-ref">
+        <div class="card-h">参考信息</div>
+        <div class="ed-sec"><div class="ed-k">原问题</div><div class="ed-v">{{ task && task.question }}</div></div>
+        <div class="ed-sec"><div class="ed-k">出错步骤</div><div class="ed-v"><code>{{ task && task.diagnosis.errorStepId }}</code></div></div>
+        <div class="ed-sec"><div class="ed-k">根因</div><div class="ed-v">{{ task && task.diagnosis.rootCause }}</div></div>
+        <div class="ed-sec"><div class="ed-k">相关规则定位 <span class="muted small">（按根因关键词）</span></div>
+          <div class="ed-v"><el-link v-for="r in editorRuleHits" :key="r.line" type="primary" :underline="false" style="display:block;font-size:12px" @click="jumpToLine(r.line)">L{{ r.line }} · {{ r.text }}</el-link><span v-if="!editorRuleHits.length" class="muted small">无命中</span></div></div>
+        <div class="ed-sec"><div class="ed-k">历史版本</div><div class="ed-v"><el-radio-group v-model="editor.baseVersion" size="mini" class="vert"><el-radio v-for="v in editor.versions" :key="v.v" :label="v.v">{{ v.v }} <span class="muted small">{{ v.desc }}</span><el-tag v-if="v.active" size="mini" type="success" style="margin-left:4px">生效</el-tag></el-radio></el-radio-group></div></div>
+        <div class="ed-sec" v-if="editor.quickResult">
+          <div class="ed-k">快速验证结果</div>
+          <div class="ed-v"><el-tag size="mini" :type="editor.quickResult.pass?'success':'danger'" effect="dark">{{ editor.quickResult.pass?'原问题通过':'原问题未通过' }}</el-tag> <span class="small">{{ editor.quickResult.elapsed }}s</span><div class="small" style="margin-top:4px">{{ editor.quickResult.msg }}</div></div>
+        </div>
+      </div>
+      <div class="ed-main">
+        <div class="ed-toolbar">
+          <el-input size="mini" placeholder="查找" v-model="editor.find" style="width:160px" prefix-icon="el-icon-search"></el-input>
+          <el-input size="mini" placeholder="替换为" v-model="editor.replace" style="width:160px;margin-left:6px"></el-input>
+          <el-button size="mini" style="margin-left:6px" @click="doReplace">替换全部</el-button>
+          <span style="flex:1"></span>
+          <span class="muted small">{{ editor.content.length }} 字 · {{ editor.content.split('\n').length }} 行</span>
+        </div>
+        <div class="ed-editor">
+          <div class="ed-gutter"><div v-for="(l,i) in editorLines" :key="i" :class="{chg: l.status!=='same'}">{{ i+1 }}</div></div>
+          <textarea ref="edTextarea" class="ed-textarea" v-model="editor.content" spellcheck="false"></textarea>
+        </div>
+        <div class="ed-foot">
+          <span class="small">版本号</span> <el-input size="mini" v-model="editor.version" style="width:110px"></el-input>
+          <span class="small" style="margin-left:12px">描述 <span class="req">*</span></span> <el-input size="mini" v-model="editor.description" placeholder="本次修改说明，审批人可见" style="flex:1"></el-input>
+        </div>
+        <div v-if="editorLint.length" class="ed-lint"><div v-for="(l,i) in editorLint" :key="i"><i class="el-icon-warning"></i> {{ l }}</div></div>
+      </div>
+      <div class="ed-diff">
+        <div class="card-h">与 {{ editor.baseVersion }} 的差异 <span class="muted small">实时</span></div>
+        <div class="diff-lines">
+          <div v-for="(l,i) in editorDiff.lines" :key="i" class="dline" :class="l.type"><span class="dmark">{{ {add:'+',del:'−',same:' '}[l.type] }}</span>{{ l.text }}</div>
+        </div>
+      </div>
+    </div>
+  </el-dialog>
+
+  <!-- ===================== ⑥ 质量统计 ===================== -->
+  <div v-show="page==='stats'" class="proto-page admin-page">
+    <div class="admin-side">
+      <div class="side-group">智能问数</div><div class="side-item">智能体管理</div><div class="side-item">AI日志管理</div><div class="side-item active">问答质量管理</div>
+    </div>
+    <div class="admin-main">
+      <div class="page-title">问答质量管理</div>
+      <el-tabs v-model="adminTab" @tab-click="onAdminTab">
+        <el-tab-pane label="用户反馈" name="feedback"></el-tab-pane>
+        <el-tab-pane label="问答诊断" name="sessions"></el-tab-pane>
+        <el-tab-pane label="调优任务" name="tuning"></el-tab-pane>
+        <el-tab-pane label="回归测试集" name="regression" disabled></el-tab-pane>
+        <el-tab-pane label="质量统计" name="stats"></el-tab-pane>
+        <el-tab-pane label="设置" name="settings"></el-tab-pane>
+      </el-tabs>
+      <div class="search-box">
+        <el-radio-group size="small" v-model="statRange"><el-radio-button label="7">近 7 天</el-radio-button><el-radio-button label="30">近 30 天</el-radio-button><el-radio-button label="90">近 90 天</el-radio-button></el-radio-group>
+        <el-select v-model="fq.agent" placeholder="全部智能体" size="small" style="width:180px;margin-left:8px" clearable></el-select>
+      </div>
+      <div class="stat-strip">
+        <div class="stat"><div class="n">1,284</div><div class="l">问答总数</div></div>
+        <div class="stat"><div class="n">312</div><div class="l">收到反馈</div><div class="s">24.3%</div></div>
+        <div class="stat ok"><div class="n">86.5%</div><div class="l">满意率（👍/(👍+👎)）</div></div>
+        <div class="stat warn"><div class="n">42</div><div class="l">👎 负反馈</div></div>
+        <div class="stat"><div class="n">37</div><div class="l">已定位</div><div class="s">88%</div></div>
+        <div class="stat"><div class="n">29</div><div class="l">已修复</div><div class="s">69%</div></div>
+        <div class="stat"><div class="n">1.8d</div><div class="l">平均定位时长</div></div>
+      </div>
+      <div class="stat-grid">
+        <div class="card">
+          <div class="card-h">错误类型分布（管理员定位口径）</div>
+          <div class="bars">
+            <div v-for="b in statBars" :key="b.code" class="bar-row"><span class="bl">{{ b.name }}</span><div class="bar"><div class="fill" :style="{width:b.pct+'%', background:b.color}"></div></div><span class="bn">{{ b.n }}</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h">用户反馈 vs 管理员定位（一致性）</div>
+          <table class="mini-tbl">
+            <tr><th>用户选</th><th>定位结论</th><th>次数</th></tr>
+            <tr><td>结果错误</td><td>指标/维度提取错误</td><td>9</td></tr>
+            <tr><td>选表错误</td><td>选表错误</td><td>8</td></tr>
+            <tr><td>指标错误</td><td>选表错误</td><td>5</td></tr>
+            <tr><td>总结错误</td><td>总结错误</td><td>4</td></tr>
+            <tr><td>结果错误</td><td>拆分错误</td><td>3</td></tr>
+          </table>
+          <div class="muted small" style="margin-top:6px">用户选「结果错误」的，60% 最终定位为指标/维度提取错误 → 可优化用户侧引导文案</div>
+        </div>
+        <div class="card">
+          <div class="card-h">高频出错表 TOP5</div>
+          <table class="mini-tbl">
+            <tr><th>表</th><th>出错</th><th>主要类型</th></tr>
+            <tr><td><code>view_line_loss_substation_fenqu</code></td><td>7</td><td>选表</td></tr>
+            <tr><td><code>view_gdl</code></td><td>6</td><td>指标/维度</td></tr>
+            <tr><td><code>view_mk_mc_metering_coverage</code></td><td>4</td><td>拆分</td></tr>
+            <tr><td><code>view_yongdian_user_scale</code></td><td>3</td><td>指标/维度</td></tr>
+            <tr><td><code>view_power_management_consumption_overview</code></td><td>2</td><td>意图</td></tr>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-h">高频出错指标/维度 TOP5</div>
+          <table class="mini-tbl">
+            <tr><th>实体</th><th>出错</th><th>常见问题</th></tr>
+            <tr><td>ll_rate 线损率（7 表同名）</td><td>9</td><td>跨表多义</td></tr>
+            <tr><td>monthpowersupply 月累计供电量</td><td>5</td><td>被 sum 重复累加</td></tr>
+            <tr><td>usercount 用户数（快照）</td><td>4</td><td>快照被求和</td></tr>
+            <tr><td>gdj 供电局</td><td>3</td><td>与 dis_org_name 混淆</td></tr>
+            <tr><td>coverage_rate 覆盖率</td><td>2</td><td>率被 sum</td></tr>
+          </table>
+        </div>
+        <div class="card wide">
+          <div class="card-h">负反馈趋势（近 30 天，按周）</div>
+          <div class="trend">
+            <div v-for="(w,i) in [14,11,9,8]" :key="i" class="tcol"><div class="tbar" :style="{height:w*8+'px'}"></div><div class="tl">W{{ i+1 }}</div><div class="tn">{{ w }}</div></div>
+            <div class="trend-note">负反馈周环比 ↓ 11%；修复后回归通过率 93%（27/29）</div>
+          </div>
+        </div>
+        <div class="card wide">
+          <div class="card-h">修复方式分布</div>
+          <div class="bars">
+            <div v-for="b in fixBars" :key="b.name" class="bar-row"><span class="bl wide">{{ b.name }}</span><div class="bar"><div class="fill" :style="{width:b.pct+'%'}"></div></div><span class="bn">{{ b.n }}</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== ⑦ 流程与字典 ===================== -->
+  <div v-show="page==='flow'" class="proto-page flow-page">
+    <div class="card">
+      <div class="card-h">业务流程</div>
+      <div class="flow">
+        <div class="fnode user">用户提问</div><div class="farrow">→</div>
+        <div class="fnode sys">System B 分析<br><small>自动落 Trace</small></div><div class="farrow">→</div>
+        <div class="fnode user">用户 👎 反馈<br><small>7 类 + 描述</small></div><div class="farrow">→</div>
+        <div class="fnode admin">反馈列表<br><small>待处理</small></div><div class="farrow">→</div>
+        <div class="fnode admin">诊断页定位<br><small>5 类主因 + 根因</small></div><div class="farrow">→</div>
+        <div class="fnode admin">生成调优建议<br><small>规则引擎 · 人工确认</small></div><div class="farrow">→</div>
+        <div class="fnode sys">应用草稿 + 快照<br><small>线上不受影响</small></div><div class="farrow">→</div>
+        <div class="fnode sys">自动验证<br><small>原题+同类+回归集</small></div><div class="farrow">→</div>
+        <div class="fnode admin">查看结果<br><small>退化检测</small></div><div class="farrow">→</div>
+        <div class="fnode admin" style="border-color:#ef4444">超级管理员审批<br><small>通过 / 驳回</small></div><div class="farrow">→</div>
+        <div class="fnode ok">发布<br><small>观察期告警</small></div><div class="farrow">/</div><div class="fnode gray">回退<br><small>无需审批</small></div>
+      </div>
+      <div class="muted small" style="margin-top:8px">管理员也可不依赖用户反馈，在「问答诊断」中按「执行失败 / 未定位」筛选主动巡检。</div>
+    </div>
+    <div class="card">
+      <div class="card-h">状态机</div>
+      <div class="flow sm">
+        <div class="fnode">反馈：待处理</div><div class="farrow">→ 保存定位</div><div class="fnode">已定位</div><div class="farrow">→ 修复状态=已修复</div><div class="fnode">已修复</div><div class="farrow">→ 回归通过</div><div class="fnode ok">已验证</div>
+        <div class="farrow" style="margin-left:24px">或</div><div class="fnode gray">已忽略</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h">调优任务状态机</div>
+      <div class="flow sm">
+        <div class="fnode">DRAFT 草稿</div><div class="farrow">→ 执行（拍快照）</div><div class="fnode">APPLIED 已应用</div><div class="farrow">→</div><div class="fnode">VERIFYING 验证中</div><div class="farrow">→</div><div class="fnode">VERIFIED 已验证</div><div class="farrow">→ 提交审批</div><div class="fnode admin">PENDING_APPROVAL 待审批</div><div class="farrow">→ 超级管理员通过</div><div class="fnode ok">PUBLISHED 已发布</div>
+      </div>
+      <div class="flow sm" style="margin-top:6px">
+        <div class="fnode">VERIFIED / PUBLISHED</div><div class="farrow">→ 回退（恢复快照）</div><div class="fnode gray">ROLLED_BACK</div>
+        <div class="farrow" style="margin-left:20px">PENDING_APPROVAL</div><div class="farrow">→ 驳回 / 撤回</div><div class="fnode">VERIFIED</div>
+        <div class="farrow" style="margin-left:20px">VERIFIED</div><div class="farrow">→ 修改建议</div><div class="fnode">DRAFT（round+1）</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h">可调优资产 × 错误类型</div>
+      <table class="mini-tbl">
+        <tr><th>资产</th><th>模块</th><th>影响环节</th><th>对应错误</th><th>草稿策略</th><th>生效方式</th></tr>
+        <tr><td>表描述</td><td>bi-manager</td><td>①召回 ②选表</td><td>选表</td><td>meta 覆盖传入</td><td>写库 → recall sync</td></tr>
+        <tr><td>指标/维度别名、口径</td><td>bi-manager</td><td>①召回 ③映射</td><td>指标/维度</td><td>meta 覆盖传入</td><td>写库 → recall sync</td></tr>
+        <tr><td>agg_type 聚合类型</td><td>bi-manager</td><td>②拆解 ④执行</td><td>拆分（口径）</td><td>meta 覆盖传入</td><td>写库</td></tr>
+        <tr><td>维度枚举值</td><td>bi-manager</td><td>②filter</td><td>维度</td><td>meta 覆盖传入</td><td>写库 → recall sync</td></tr>
+        <tr><td>智能体知识库 / 绑定表</td><td>chat-server</td><td>②拆解 ⑤总结</td><td>意图 / 选表</td><td>meta 覆盖传入</td><td>写库</td></tr>
+        <tr><td>拆解 / 总结提示词</td><td>System B</td><td>②拆解 ⑤总结</td><td>拆分 / 意图 / 总结</td><td>新建版本不激活 + prompt_overrides</td><td>prompts/switch</td></tr>
+        <tr><td>召回配置 / 词典</td><td>recall</td><td>①召回</td><td>选表 / 指标维度</td><td>config_overrides（Phase 2）</td><td>写库 30s 热刷 / reload</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-h">错误类型字典（两侧统一编码）</div>
+      <el-table :data="dictTable" border size="small">
+        <el-table-column label="code" prop="code" width="200"><template slot-scope="{row}"><code>{{ row.code }}</code></template></el-table-column>
+        <el-table-column label="名称" prop="name" width="150"></el-table-column>
+        <el-table-column label="用户可选" width="90" align="center"><template slot-scope="{row}">{{ row.user?'✓':'—' }}</template></el-table-column>
+        <el-table-column label="管理可选" width="90" align="center"><template slot-scope="{row}">{{ row.admin?'✓':'—' }}</template></el-table-column>
+        <el-table-column label="链路环节" prop="stage" width="140"></el-table-column>
+        <el-table-column label="定位依据（诊断页看哪里）" prop="evidence" min-width="260"></el-table-column>
+        <el-table-column label="典型修复" prop="fix" min-width="180"></el-table-column>
+      </el-table>
+    </div>
+    <div class="card">
+      <div class="card-h">自动预判规则（诊断页右上角"系统预判"）</div>
+      <table class="mini-tbl">
+        <tr><th>信号</th><th>预判类型</th></tr>
+        <tr><td>execution_log 存在 status=failed 的 compute 步骤</td><td>拆分错误</td></tr>
+        <tr><td>step_trace 存在 unmatched_columns（拆解列未映射到指标/维度）</td><td>指标/维度提取错误</td></tr>
+        <tr><td>拆解 expected_table = UNKNOWN，或 expected_table ≠ 实际 resolved_table</td><td>选表错误</td></tr>
+        <tr><td>召回缩圈后表数为 0 / 拆解用到的表不在召回结果内</td><td>选表错误</td></tr>
+        <tr><td>拆解重试 ≥ 2 次</td><td>拆分错误</td></tr>
+        <tr><td>快照/累计类指标（agg_type）在 compute 中被 sum</td><td>拆分错误</td></tr>
+        <tr><td>summarize 输入数据行数为 0 但答案给出了具体数值</td><td>总结错误</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="./vendor/vue.js"></script>
+<script src="./vendor/element-ui.js"></script>
+<script src="./mock.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>

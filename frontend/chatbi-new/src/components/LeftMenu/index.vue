@@ -58,6 +58,7 @@
             <el-menu-item index="5-1" v-if="showPormptPage" @click="handleClick(RouterEnum.PROMPTMANAGER)">提示词管理</el-menu-item>
             <el-menu-item index="5-2" @click="handleClick(RouterEnum.AILOGMANAGER)">日志管理</el-menu-item>
             <el-menu-item index="5-3" @click="handleClick(RouterEnum.TASKCONFIG)">定时任务</el-menu-item>
+            <el-menu-item index="5-4" @click="handleClick(RouterEnum.QUALITYMANAGER)">问答质量管理</el-menu-item>
           </el-menu-item-group>
         </el-submenu>
       </el-menu>

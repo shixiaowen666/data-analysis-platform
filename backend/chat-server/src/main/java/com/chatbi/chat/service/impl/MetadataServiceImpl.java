@@ -87,6 +87,23 @@ public class MetadataServiceImpl implements MetadataService {
         return result;
     }
 
+    @Override
+    public String buildAgentBusinessContext(String code) {
+        try {
+            com.chatbi.chat.entity.AiBody aiBody = aiBodyService.getAiBodyByCode(code);
+            if (aiBody == null || CollectionUtils.isEmpty(aiBody.getAiBodyKnowledgeInfoList())) {
+                return "";
+            }
+            return aiBody.getAiBodyKnowledgeInfoList().stream()
+                    .map(com.chatbi.chat.models.AiBodyKnowledgeInfo::getKnowledgeElement)
+                    .filter(StringUtils::isNotBlank)
+                    .map(c -> "- " + c)
+                    .collect(Collectors.joining("\n"));
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
     private Set<Long> collectIds(List<Map<String, Object>> rows, String key) {
         Set<Long> ids = new HashSet<>();
         if (CollectionUtils.isEmpty(rows)) {

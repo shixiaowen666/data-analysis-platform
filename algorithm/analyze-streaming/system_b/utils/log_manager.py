@@ -62,6 +62,7 @@ def _write_operation_log_sync(
     step_outputs: Optional[dict] = None,
     execution_log: Optional[list] = None,
     result_future: Optional[Future] = None,
+    request_id: str = "",
 ):
     """
     Write an operation log entry (4-module format, per 项目/日志格式.txt).
@@ -93,7 +94,7 @@ def _write_operation_log_sync(
 
         def _build_lines(seq: int) -> list:
             lines = [
-                f"[{timestamp}] [{user_id}] [{username}]",
+                f"[{timestamp}] [{user_id}] [{username}]" + (f" [request_id={request_id}]" if request_id else ""),
                 f"问题{seq}：",
                 f"1、用户问题：{query}",
                 "",
@@ -131,7 +132,8 @@ def _write_operation_log_sync(
                 seq += 1
 
         log_path = f"userlogs/{user_id}/{log_date}/问题{seq}.log"
-        db_ok = db.insert_operation_log(user_id, username, log_date, log_path, question=query)
+        db_ok = db.insert_operation_log(user_id, username, log_date, log_path, question=query,
+                                        request_id=request_id)
 
         if db_ok:
             logger.info(f"[LogManager] Log written: {log_file}")
@@ -209,6 +211,7 @@ def write_operation_log(
     steps: Optional[list] = None,
     step_outputs: Optional[dict] = None,
     execution_log: Optional[list] = None,
+    request_id: str = "",
 ) -> Future:
     """Enqueue an operation log write. Returns immediately; actual file write
     and DB insert happen on a background thread (non-fatal by design).
@@ -228,6 +231,7 @@ def write_operation_log(
                 step_outputs,
                 execution_log,
                 fut,
+                request_id,
             )
         )
     except Exception as exc:

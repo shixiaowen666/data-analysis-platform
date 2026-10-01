@@ -27,6 +27,7 @@ from system_b.utils.llm_helper import call_llm, call_llm_stream
 from system_b.utils.step_result_notifier import AnalysisProgressReporter
 from system_b.utils.step_result_callback_sender import StepResultCallbackSender
 from system_b.utils.prompt_version_manager import get_current_prompt
+from system_b.utils.tuning_support import current_prompt_overrides, set_prompt_overrides
 from system_b.utils.llm_call_log import hash_content, archive_variable
 from system_b.utils.prompt_template import render_template
 
@@ -162,7 +163,12 @@ class DAGEngine:
                 and self.context.get_step_status(s["step_id"]) in ("success", "failed")
             )
 
+        # 调优草稿验证的 prompt_overrides 是线程级的，worker 线程需显式继承
+        _prompt_overrides = current_prompt_overrides()
+
         def _run_step(step):
+            if _prompt_overrides:
+                set_prompt_overrides(_prompt_overrides)
             step_id = step["step_id"]
             deps = step.get("depends_on", [])
             if deps:

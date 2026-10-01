@@ -12,6 +12,7 @@ import os
 import re
 import sys
 import threading
+import time
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -32,10 +33,14 @@ from system_b.utils.prompt_version_manager import (
     list_groups, create_group, update_group, delete_group,
     list_versions, switch_version, get_current_version,
     get_version_content, update_version, delete_version,
-    ensure_initial_versions,
+    ensure_initial_versions, get_current_prompt,
 )
 from system_b.utils.step_result_notifier import AnalysisProgressReporter
 from system_b.utils import batch_report
+from system_b.utils.tuning_support import (
+    TUNING_HEADER, is_tuning_request, normalize_prompt_overrides, PromptOverrideContext,
+    extract_structured, lint_prompt, diff_lines, next_version,
+)
 
 # Add-on: in-process progress bus + SSE endpoint (no existing logic touched)
 from system_b.utils.progress_push import progress_bp, store_result
@@ -349,10 +354,22 @@ def analyze():
             chat_id = data.get("chatId", "")
         query = data.get("query", "")
         database_meta = data.get("database_meta", {})
+        # 调优草稿验证模式（X-Tuning-Task 头 / request_id 以 tuning- 开头）：
+        # bi-manager 已按 tuning_change 生成"调优后"的 database_meta，recall 索引仍是旧的，
+        # 因此跳过 recall 缩圈直接使用传入 meta；并按 prompt_overrides 使用草稿提示词版本。
+        tuning_mode = is_tuning_request(request.headers, request_id)
+        prompt_overrides = normalize_prompt_overrides(data.get("prompt_overrides"))
+        if tuning_mode:
+            logger.info(
+                "[SystemB] TUNING mode: request_id=%s task=%s prompt_overrides=%s (recall skipped)",
+                request_id, request.headers.get(TUNING_HEADER, ""), prompt_overrides,
+            )
         # recall 元数据缩圈：配置生效时用缩圈 meta 替换请求体全量；
         # 失败/超时/空结果降级走原全量（recall_client 内部已记录降级日志）
         recalled = None
-        if query:
+        if query and tuning_mode:
+            recall_info = {"enabled": False, "used": False, "message": "tuning mode: recall skipped"}
+        elif query:
             recalled, recall_info = recall_client.fetch_database_meta_with_info(query)
             if recalled is not None:
                 database_meta = recalled
@@ -380,22 +397,25 @@ def analyze():
         logger.info(f"[SystemB] Received analyze request: {request_id}, query: {query[:80]}...")
 
         # Streaming decomposition + incremental execution
-        step_gen = decompose_query_stream(query, database_meta)
-        engine = DAGEngine(
-            request_id=request_id,
-            original_question=query,
-            database_meta=database_meta,
-            stream_name=stream_name,
-        )
-        result = engine.execute_streaming(
-            step_gen,
-            chat_session_id=chat_session_id,
-            chat_id=chat_id,
-            auth_header=request.headers.get("Authorization", ""),
-            tenant_id=request.headers.get("tenantid", ""),
-            skip_chat_clear=bool(data.get("skip_chat_clear", False)),
-        )
+        _analyze_t0 = time.time()
+        with PromptOverrideContext(prompt_overrides):
+            step_gen = decompose_query_stream(query, database_meta)
+            engine = DAGEngine(
+                request_id=request_id,
+                original_question=query,
+                database_meta=database_meta,
+                stream_name=stream_name,
+            )
+            result = engine.execute_streaming(
+                step_gen,
+                chat_session_id=chat_session_id,
+                chat_id=chat_id,
+                auth_header=request.headers.get("Authorization", ""),
+                tenant_id=request.headers.get("tenantid", ""),
+                skip_chat_clear=bool(data.get("skip_chat_clear", False)) or tuning_mode,
+            )
         decomposition = result["decomposition"]
+        structured = extract_structured(decomposition.get("steps", []), result["execution_log"])
 
         response = {
             "request_id": request_id,
@@ -405,6 +425,16 @@ def analyze():
             "execution_log": result["execution_log"],
             "model_outputs": decomposition.get("model_outputs", []),
             "recall": recall_info,
+            # 结构化字段（问答质量管理 trace / 调优验证 judge 使用）
+            "steps": decomposition.get("steps", []),
+            "used_tables": structured["used_tables"],
+            "resolved_metrics": structured["resolved_metrics"],
+            "resolved_dims": structured["resolved_dims"],
+            "failed_steps": structured["failed_steps"],
+            "prompt_version": _resolve_prompt_version(prompt_overrides),
+            "prompt_overrides": prompt_overrides or None,
+            "tuning_mode": tuning_mode,
+            "elapsed_ms": int((time.time() - _analyze_t0) * 1000),
         }
         if recall_info and recall_info.get("used") and recalled is not None:
             response["recall"] = {**recall_info, "database_meta": recalled}
@@ -422,6 +452,7 @@ def analyze():
                     steps=decomposition.get("steps", []),
                     step_outputs=engine.context.get_all_outputs(),
                     execution_log=result["execution_log"],
+                    request_id=request_id,
                 )
                 log_path = _log_path_of(log_fut)
             except Exception as log_err:
@@ -453,6 +484,7 @@ def analyze():
                     steps=[],
                     step_outputs={},
                     execution_log=[{"step_id": "decompose", "status": "failed", "error": str(e)}],
+                    request_id=(data or {}).get("request_id", ""),
                 )
                 log_path = _log_path_of(log_fut)
             except Exception as log_err:
@@ -487,6 +519,7 @@ def analyze():
                     steps=[],
                     step_outputs={},
                     execution_log=[{"step_id": "system", "status": "failed", "error": str(e)}],
+                    request_id=(data or {}).get("request_id", ""),
                 )
                 log_path = _log_path_of(log_fut)
             except Exception as log_err:
@@ -924,6 +957,168 @@ def logs_preview():
     except Exception as exc:
         logger.error(f"[SystemB] Logs preview error: {exc}", exc_info=True)
         return _fail("服务器内部错误", 500)
+
+
+@app.route("/api/v1/logs/by-request", methods=["POST", "GET"])
+def logs_by_request():
+    """问答质量管理：按 request_id（sessionId@chatId）回查 System B 日志全文。
+
+    body/query: {request_id}
+    返回 {log_path, content, question, user_id, username, created_at}
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        request_id = (data.get("request_id") or request.args.get("request_id") or "").strip()
+        if not request_id:
+            return _fail("参数错误：request_id 为必填项")
+        row = db.get_operation_log_by_request_id(request_id)
+        if not row:
+            return _fail("未找到该 request_id 对应的日志", 404)
+        log_path = row.get("log_path") or ""
+        content = ""
+        logs_root = Path(Config.LOGS_DIR).resolve()
+        file_path = (logs_root / log_path).resolve()
+        if log_path and file_path.is_relative_to(logs_root) and file_path.exists():
+            content = file_path.read_text(encoding="utf-8")
+        return _ok(data={
+            "request_id": request_id,
+            "log_path": log_path,
+            "content": content,
+            "question": row.get("question"),
+            "user_id": row.get("user_id"),
+            "username": row.get("username"),
+            "created_at": str(row.get("created_at") or ""),
+        })
+    except Exception as exc:
+        logger.error(f"[SystemB] logs/by-request error: {exc}", exc_info=True)
+        return _fail("服务器内部错误", 500)
+
+
+# ==============================================================================
+# 提示词编辑器（问答质量管理 · 调优）
+# ==============================================================================
+
+def _resolve_group(data: dict):
+    """支持 group_id（int）或 group_name（str）定位分组。"""
+    group_id = data.get("group_id")
+    group_name = data.get("group_name") or data.get("group")
+    if isinstance(group_id, int) and group_id > 0:
+        return db.get_prompt_group_by_id(group_id)
+    if group_name:
+        return db.get_prompt_group_by_name(str(group_name))
+    return None
+
+
+@app.route("/api/v1/prompts/version/create", methods=["POST"])
+def prompts_version_create():
+    """基于基线版本新建**不激活**的草稿版本（提示词编辑器「保存」）。
+
+    body: {group_id | group_name, base_version?, content, version?, description}
+    - version 省略时自动取 base_version(或最新版本) +1 patch
+    - description 必填；content 与基线相同（diff 为空）拒绝保存
+    - lint 有 error 时拒绝保存（返回 lint 结果）
+    """
+    try:
+        data = request.get_json() or {}
+        group = _resolve_group(data)
+        if not group:
+            return _fail("分组不存在（group_id / group_name）")
+        content = data.get("content") or ""
+        description = (data.get("description") or "").strip()
+        if not content.strip():
+            return _fail("content 为必填项")
+        if not description:
+            return _fail("description（版本说明）为必填项")
+
+        lint = lint_prompt(group["name"], content)
+        if not lint["ok"]:
+            return jsonify({"code": 422, "message": "提示词校验未通过", "data": {"lint": lint}}), 200
+
+        base_version = data.get("base_version") or ""
+        base_content = ""
+        if base_version:
+            base = get_version_content(group_id=group["id"], version=base_version)
+            if not base:
+                return _fail(f"基线版本不存在: {base_version}")
+            base_content = base.get("content") or ""
+        else:
+            cur = get_current_version(group["id"])
+            if cur:
+                base_version = cur.get("version") or ""
+                base_content = cur.get("content") or ""
+        if base_content and base_content == content:
+            return _fail("内容与基线版本完全相同（diff 为空），无需保存")
+
+        version = (data.get("version") or "").strip()
+        if version and not re.match(r"^v?\d+\.\d+\.\d+$", version):
+            return _fail("version 格式错误，应为 vX.Y.Z")
+        if not version:
+            latest = db.get_latest_version_number(group["id"]) or base_version or "v1.0.0"
+            version = next_version(latest)
+        if db.get_version_by_group_and_version(group["id"], version):
+            return _fail(f"版本号已存在: {version}")
+
+        result = update_version(group_id=group["id"], content=content, version=version, description=description)
+        d = diff_lines(base_content, content)
+        result.update({
+            "group_name": group["name"],
+            "base_version": base_version,
+            "diff_added": d["added"],
+            "diff_removed": d["removed"],
+            "diff_summary": f"+{d['added']}/−{d['removed']} 行，基于 {base_version or '—'}",
+            "lint": lint,
+        })
+        return _ok(result)
+    except ValueError as exc:
+        return _fail(str(exc))
+    except Exception as exc:
+        logger.error(f"[SystemB] prompts/version/create error: {exc}", exc_info=True)
+        return _fail(str(exc), 500)
+
+
+@app.route("/api/v1/prompts/version/diff", methods=["POST"])
+def prompts_version_diff():
+    """行级 diff。body: {group_id|group_name, from, to} 或 {from_content, to_content}。"""
+    try:
+        data = request.get_json() or {}
+        before = data.get("from_content")
+        after = data.get("to_content")
+        if before is None or after is None:
+            group = _resolve_group(data)
+            if not group:
+                return _fail("分组不存在（group_id / group_name）")
+            v_from = data.get("from") or ""
+            v_to = data.get("to") or ""
+            if before is None:
+                if not v_from:
+                    cur = get_current_version(group["id"])
+                    v_from = (cur or {}).get("version", "")
+                src = get_version_content(group_id=group["id"], version=v_from) if v_from else None
+                if not src:
+                    return _fail(f"from 版本不存在: {v_from}")
+                before = src.get("content") or ""
+            if after is None:
+                dst = get_version_content(group_id=group["id"], version=v_to) if v_to else None
+                if not dst:
+                    return _fail(f"to 版本不存在: {v_to}")
+                after = dst.get("content") or ""
+        return _ok(diff_lines(before or "", after or ""))
+    except Exception as exc:
+        logger.error(f"[SystemB] prompts/version/diff error: {exc}", exc_info=True)
+        return _fail(str(exc), 500)
+
+
+@app.route("/api/v1/prompts/lint", methods=["POST"])
+def prompts_lint():
+    """占位符 / 分隔符 / 括号配对检查。body: {group_id|group_name, content}"""
+    try:
+        data = request.get_json() or {}
+        group = _resolve_group(data)
+        group_name = group["name"] if group else (data.get("group_name") or data.get("group") or "prompt-main")
+        return _ok(lint_prompt(str(group_name), data.get("content") or ""))
+    except Exception as exc:
+        logger.error(f"[SystemB] prompts/lint error: {exc}", exc_info=True)
+        return _fail(str(exc), 500)
 
 
 @app.route("/api/v1/logs/users", methods=["POST"])
@@ -1477,6 +1672,17 @@ def batch_history_delete(batch_id):
     except Exception as exc:
         logger.error(f"[SystemB] batch/history delete error: {exc}", exc_info=True)
         return _fail("服务器内部错误", 500)
+
+
+def _resolve_prompt_version(prompt_overrides: dict) -> str:
+    """当前拆解提示词版本（override 优先，否则激活版本），trace 落库用；失败不致命。"""
+    try:
+        if prompt_overrides and prompt_overrides.get("prompt-main"):
+            return prompt_overrides["prompt-main"]
+        _, meta = get_current_prompt("prompt-main")
+        return (meta or {}).get("version", "")
+    except Exception:
+        return ""
 
 
 def _determine_status(execution_log: list) -> str:

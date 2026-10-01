@@ -11,6 +11,7 @@ from typing import Optional
 
 from system_b.config import Config
 from system_b.utils import db
+from system_b.utils.tuning_support import get_prompt_override
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,23 @@ def get_current_prompt(group_name: str) -> tuple:
         Returns ("", {}) if group or active version not found.
     Uses memory cache. If cache miss, reads from DB and file system.
     """
+    # 调优草稿验证：prompt_overrides 指定非激活版本（线程级覆盖，不写缓存、不影响线上）
+    override_version = get_prompt_override(group_name)
+    if override_version:
+        group = db.get_prompt_group_by_name(group_name)
+        if not group:
+            logger.warning(f"[PromptManager] Group '{group_name}' not found (override)")
+            return "", {}
+        target = db.get_version_by_group_and_version(group["id"], override_version)
+        if not target:
+            raise ValueError(f"prompt_overrides 指定的版本不存在: {group_name}/{override_version}")
+        content = _read_file_content(target["file_path"])
+        logger.info(
+            f"[PromptManager] OVERRIDE '{group_name}' version={override_version} "
+            f"(draft verification, not cached)"
+        )
+        return content, {"group": group_name, "version": override_version, "override": True}
+
     # Check cache
     if group_name in _cache:
         version, content = _cache[group_name]

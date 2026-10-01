@@ -10,6 +10,7 @@ export const RouterEnum =
   AILOGMANAGER: { name: '日志管理', component: 'aiLogManager' },
   PROMPTMANAGER: { name: '提示词管理', component: 'promptManager' },
   TASKCONFIG: { name: '定时任务', component: 'taskConfig' },
+  QUALITYMANAGER: { name: '问答质量管理', component: 'qualityManager' },
 
   NEWBI: { name: '智能问数', component: 'newBI' },
 }
