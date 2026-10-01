@@ -1,6 +1,6 @@
 # 问答质量管理 / 自动调优 — 本地开发与自测说明
 
-对应需求：`docs/requirements/01`（错误定位 + 用户反馈）、`docs/requirements/03`（自动调优）。
+对应需求：`requirements/01`（错误定位 + 用户反馈）、`requirements/03`（自动调优）。
 
 ## 涉及模块
 
