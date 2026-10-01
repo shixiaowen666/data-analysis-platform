@@ -1,6 +1,6 @@
 # Data Analysis Platform
 
-数据智能分析平台。仓库按模块类型划分目录：后端服务位于 `backend/`，算法服务位于 `algorithm/`，前端工程位于 `frontend/`，需求与设计文档位于 `docs/`。
+数据智能分析平台。仓库按模块类型划分目录：后端服务位于 `backend/`，算法服务位于 `algorithm/`，前端工程位于 `frontend/`，需求与设计文档位于 `requirements/`，原型与开发自测材料位于 `docs/`。
 
 > 说明：本仓库的 `main` 分支由 Genspark AI 按模块分批次推送。第一批为 **后端（backend）** 模块，第二批为 **算法（algorithm）** 模块，第三批为 **前端（frontend）** 模块。
 
@@ -18,9 +18,10 @@ data-analysis-platform/
 │   └── recall-service/      # 智能问数召回服务（Embedding + FAISS 四路并行召回 + LLM 精判）
 ├── frontend/                # 前端工程（Vue）
 │   └── chatbi-new/          # 深圳项目前端（ChatBI 问数 + BI 管理后台：数据源/模型/指标/维度/提示词管理等）
-├── docs/                    # 需求与设计文档
-│   ├── requirements/        # 01 问答质量管理方案 · 02 原型说明 · 03 自动调优设计
-│   └── prototype/           # 可点击交互原型（Vue2 + Element UI，双击 index.html 打开）
+├── requirements/            # 需求与设计文档：01 问答质量管理方案 · 02 原型说明 · 03 自动调优设计
+├── docs/                    # 原型与开发自测材料
+│   ├── prototype/           # 可点击交互原型（Vue2 + Element UI，双击 index.html 打开）+ 实现截图 screenshots/impl
+│   └── dev/                 # 沙箱拉起/重置脚本、mock、UI E2E、API 功能测试、验收指引
 └── README.md
 ```
 
@@ -28,11 +29,11 @@ data-analysis-platform/
 
 | 编号 | 文档 | 说明 |
 | --- | --- | --- |
-| 01 | [问答质量管理方案](docs/requirements/01-问答质量管理方案.md) | 用户反馈（7 类错误 + 描述）、管理端错误定位（链路追踪 · 5 类主因）、数据模型、接口、页面 |
-| 02 | [原型说明](docs/requirements/02-原型说明.md) | `docs/prototype/` 12 个页面与交互说明 |
-| 03 | [自动调优设计](docs/requirements/03-自动调优设计.md) | 定位后 → 调优建议 → 草稿验证 → 超级管理员审批发布 / 回退；提示词编辑器；验证配置；观察期告警 |
+| 01 | [问答质量管理方案](requirements/01-问答质量管理方案.md) | 用户反馈（7 类错误 + 描述）、管理端错误定位（链路追踪 · 5 类主因）、数据模型、接口、页面 |
+| 02 | [原型说明](requirements/02-原型说明.md) | `docs/prototype/` 12 个页面与交互说明 |
+| 03 | [自动调优设计](requirements/03-自动调优设计.md) | 定位后 → 调优建议 → 草稿验证 → 超级管理员审批发布 / 回退；提示词编辑器；验证配置；观察期告警 |
 
-详见 [docs/requirements/README.md](docs/requirements/README.md)。
+详见 [requirements/README.md](requirements/README.md)。
 
 ## 后端模块一览
 
